@@ -11,4 +11,4 @@ echo http://125.6.38.24:8010/
 #ETRI bot
 #python flask_viewer.py 8010 checkpoints/ETRI-Bot_new_L1/web/images
 #MPV TOP mfpng
-python flask_viewer.py 8010 checkpoints/mpvfull_top_pbafn/web/images
+python flask_viewer.py 8010 /mnt/linux/linux_workspace/checkpoints/alias_bbangsik/web/images

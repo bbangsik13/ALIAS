@@ -37,10 +37,11 @@ if opt.debug:
 
 # 2. dataset and loader 
 data_loader = CreateDataLoader(opt)
-dataset = data_loader.data_loader
+
 if opt.use_warped:
     dataset = data_loader.load_data()
-
+else:
+    dataset = data_loader.data_loader
 dataset_size = len(data_loader)
 print('#training images = %d' % dataset_size)
 
@@ -66,6 +67,7 @@ once2 = True
 for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     epoch_start_time = time.time()
     if epoch != start_epoch:
+        print(dataset_size)
         epoch_iter = epoch_iter % dataset_size
 
     save_epoch_iter = epoch_iter  # heejun

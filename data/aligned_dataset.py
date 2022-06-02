@@ -10,12 +10,12 @@ import cv2
 class AlignedDataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
-        self.root = opt.dataroot#datasets/alias
-
+        self.root = os.path.join(opt.dataroot,opt.dataset_mode)#datasets/alias
         ## @TODO : Dangerous way, if one mistake will spoil all and cannot check the error
 
         ## img_argnostic
         self.img_agnostic_dir = os.path.join(self.root,'img_agnostic')
+
         self.img_agnostic_paths = sorted(glob(os.path.join(self.img_agnostic_dir,"*")))
 
         ## pose
