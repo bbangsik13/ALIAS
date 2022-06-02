@@ -1,4 +1,7 @@
 import os.path
+
+import matplotlib.pyplot as plt
+
 from data.base_dataset import BaseDataset, get_params, get_transform, normalize,normalize_transform
 from data.image_folder import make_dataset
 from PIL import Image
@@ -125,6 +128,21 @@ class AlignedDataset(BaseDataset):
         ground_truth_image = Image.open(ground_truth_path)
         transform_synthesis_image = normalize_transform()
         ground_truth_image_tensor = transform_synthesis_image(ground_truth_image.convert('RGB'))
+
+        if self.opt.swap_warped_cloth:
+            cloth_mask = (parse_tensor[2:3,:,:]>0).repeat(3,1,1)
+            #plt.subplot(1, 2, 1), plt.imshow(
+            #    ((np.transpose(warped_c_tensor.numpy(), (1, 2, 0)) + 1) / 2 * 255).astype(np.uint8))
+            ground_truth_cloth = ground_truth_image_tensor.clone()
+            ground_truth_cloth[torch.logical_not(cloth_mask)] = 1.0
+            warped_c_tensor = ground_truth_cloth
+            #plt.subplot(1, 2, 2), plt.imshow(
+            #    ((np.transpose(warped_c_tensor.numpy(), (1, 2, 0)) + 1) / 2 * 255).astype(np.uint8))
+            #plt.subplot(1,3,1),plt.imshow(((np.transpose(ground_truth_image_tensor.numpy(), (1, 2, 0)) + 1) / 2 * 255).astype(np.uint8))
+            #plt.subplot(1,3,2),plt.imshow(((np.transpose(cloth_mask.numpy(), (1, 2, 0)) + 1) / 2 * 255).astype(np.uint8))
+            #plt.subplot(1,3,3),plt.imshow(((np.transpose(ground_truth_cloth.numpy(),(1,2,0))+1)/2*255).astype(np.uint8))
+            #plt.show()
+
 
         input_dict = {'index': index, 
                 'img_agnostic':img_agnostic_tensor,
