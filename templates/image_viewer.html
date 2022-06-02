@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+<title> Style Viton Result</title>
+
+<style>
+*{
+  box-sizing: border-box;
+}
+
+.column {
+  float: left;
+  width: 10%;
+  padding: 5px;
+}
+.column3{
+  float: left;
+  width: 50%;
+  padding: 5px;
+}
+/* Clearfix (clear floats) */
+.row::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+</style>
+
+</head >
+
+<body>
+
+<h1> <center> Style VITON </center> </h1>
+
+<center>
+<div> 
+	<img src ="/result/{{imagefile}}" height=256><br>
+	{{imagefile}} ({{id}}/{{total_num}})
+</div>
+</center>
+
+<!--
+<center> <a href ="/"> <b> back </b> </a> </center>
+-->
+<center>
+<div class="row">
+	<div class="column3">
+		<form action="/prev" method="post">
+			<input type="number" name="step"  value="1">
+			<button type="submit" formmethod="POST"> <b> prev </b></button>
+		</form>
+		</div>
+<div class="column3">
+		<form action="/filter" method="post">
+			<input type="text" name="pattern">
+			<button type="submit" formmethod="POST"> <b> filter</b></button>
+		</form>
+		</div>
+		</div>
+<div class="column3">
+		<form action="/next" method="post">
+			<input type="number" name="step"  value="1">
+			<button type="submit" formmethod="POST"> <b> next </b></button>
+		</form>
+		</div>
+</div>
+</center>
+</body>
+</html>
+
