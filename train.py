@@ -120,9 +120,9 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         optimizer_D.zero_grad()
         loss_D.backward()
         optimizer_D.step()
-        errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
+        '''errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
         eta = (time.time() - epoch_start_time) * (len(dataset) / opt.batchSize - i) / (i - save_epoch_iter + 1)
-        visualizer.print_current_errors(epoch, epoch_iter, errors, eta)
+        visualizer.print_current_errors(epoch, epoch_iter, errors, eta)'''
         ############## Display results and errors ##########
         ### print out errors
         if total_steps % opt.print_freq == print_delta:
