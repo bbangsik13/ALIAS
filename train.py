@@ -138,7 +138,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
                     if not once2: # debugging inputs
                         # to check result only 
                         visuals = OrderedDict([('gen{:05d}'.format(data_index), util.tensor2im(generated.data[0])),
-                                   ('gt{:05d}'.format(data_index), util.tensor2im(data['synthesis_image'][0]))])
+                                   ('gt{:05d}'.format(data_index), util.tensor2im(data['ground_truth_image'][0]))])
                     else:
                         visuals = OrderedDict([('gen{:05d}'.format(data_index), util.tensor2im(generated.data[0])),
                                    ('Ia{:05d}'.format(data_index), util.tensor2im(data['img_agnostic'][0])),
@@ -147,7 +147,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
                                    ('pose{:05d}'.format(data_index), util.tensor2im(data['pose'][0])),
                                    ('Sdiv{:05d}'.format(data_index), util.tensor2label(data['parse_div'][0], 8)),
                                    ('Mdiv{:05d}'.format(data_index), util.tensor2im(data['misalign_mask'][0])),
-                                   ('gt{:05d}'.format(data_index), util.tensor2im(data['synthesis_image'][0])),
+                                   ('gt{:05d}'.format(data_index), util.tensor2im(data['ground_truth_image'][0])),
                                    #('cm{:05d}'.format(data_index), util.tensor2im(c_mask[0])),
                                    #('gt2{:05d}'.format(data_index), util.tensor2im(Igt2[0])),
                                    
