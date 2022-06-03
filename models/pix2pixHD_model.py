@@ -29,10 +29,7 @@ class Pix2PixHDModel(BaseModel):
         ##### define networks        
         # Generator network
         netG_input_nc = input_nc        
-        if not opt.no_instance:
-            netG_input_nc += 1
-        if self.use_features:
-            netG_input_nc += opt.feat_num                  
+
         self.netG = networks.define_G(netG_input_nc, opt.output_nc, opt.ngf, opt.netG, 
                                       opt.n_downsample_global, opt.n_blocks_global, opt.n_local_enhancers, 
                                       opt.n_blocks_local, opt.norm, gpu_ids=self.gpu_ids,opt=opt)
@@ -40,9 +37,6 @@ class Pix2PixHDModel(BaseModel):
         # Discriminator network
         if self.isTrain:
             use_sigmoid = opt.no_lsgan
-            netD_input_nc = input_nc + opt.output_nc
-            if not opt.no_instance:
-                netD_input_nc += 1
             netD_input_nc = 12
             self.netD = networks.define_D(netD_input_nc, opt.ndf, opt.n_layers_D, opt.norm, use_sigmoid, 
                                           opt.num_D, not opt.no_ganFeat_loss, gpu_ids=self.gpu_ids)
@@ -93,7 +87,10 @@ class Pix2PixHDModel(BaseModel):
         else:
             return self.netD.forward(input_concat)
 
-    def forward(self, img_agnostic,pose, warped_c, parse, parse_div,misalign_mask,agnostic_mask,synthesis_image, infer=False):
+    def forward(self, img_agnostic,pose, warped_c, parse, parse_div,misalign_mask,agnostic_mask,ground_truth_image, infer=False):
+        #@ TODO: which loss do we have to use?
+        #@ TODO: why do we have to normalize pose? \
+        # in SPADE normalizing uniform values like openpose_render lose information
 
         fake_image =self.netG.forward(torch.cat((img_agnostic, pose, warped_c), dim=1), parse, parse_div, misalign_mask)
         # Fake Detection and Loss
@@ -101,7 +98,7 @@ class Pix2PixHDModel(BaseModel):
         loss_D_fake = self.criterionGAN(pred_fake_pool, False)        
 
         # Real Detection and Loss        
-        pred_real = self.discriminate(torch.cat((img_agnostic, pose, warped_c), dim=1), synthesis_image)
+        pred_real = self.discriminate(torch.cat((img_agnostic, pose, warped_c), dim=1), ground_truth_image)
         loss_D_real = self.criterionGAN(pred_real, True)
 
         # GAN loss (Fake Passability Loss)        
@@ -121,7 +118,7 @@ class Pix2PixHDModel(BaseModel):
         # VGG feature matching loss
         loss_G_VGG = 0
         if not self.opt.no_vgg_loss:
-            loss_G_VGG = self.criterionVGG(fake_image, synthesis_image) * self.opt.lambda_feat
+            loss_G_VGG = self.criterionVGG(fake_image, ground_truth_image) * self.opt.lambda_feat
 
         # heejune added L1 for testing
         loss_G_L1 = 0

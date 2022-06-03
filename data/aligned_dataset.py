@@ -14,7 +14,7 @@ class AlignedDataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
         self.root = os.path.join(opt.dataroot,opt.dataset_mode)#datasets/alias
-        ## @TODO : Dangerous way, if one mistake will spoil all and cannot check the error
+        ## Dangerous way, if one mistake will spoil all and cannot check the error
 
         ## img_argnostic
         self.img_agnostic_dir = os.path.join(self.root,'img_agnostic')

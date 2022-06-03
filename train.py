@@ -67,7 +67,6 @@ once2 = True
 for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     epoch_start_time = time.time()
     if epoch != start_epoch:
-        print(dataset_size)
         epoch_iter = epoch_iter % dataset_size
 
     save_epoch_iter = epoch_iter  # heejun

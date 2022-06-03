@@ -10,6 +10,6 @@ python train.py --checkpoints_dir /mnt/linux/linux_workspace/checkpoints\
  --no_flip --serial_batches \
  --name alias_bbangsik \
  --dataset_etri \
- --use_warp \
  --no_L1_loss \
- --swap_warped_cloth
+ --use_warp \
+ #--swap_warped_cloth

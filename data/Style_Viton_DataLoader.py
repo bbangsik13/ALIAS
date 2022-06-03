@@ -1,13 +1,14 @@
 import json
 from os import path as osp
 
+import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image, ImageDraw
 import cv2
 import torch
 from torch.utils import data
 from torchvision import transforms
-
+import cv2
 '''
 
 
@@ -47,7 +48,7 @@ from torchvision import transforms
 
 
 class VITONDataset(data.Dataset):
-    ''' @TODO: optimize for train mode and test mode '''
+
 
     def __init__(self, opt):
         super(VITONDataset, self).__init__()
@@ -99,10 +100,6 @@ class VITONDataset(data.Dataset):
             12: ['noise', [3, 11]]
         }
 
-        if False:  # for torso & neck test
-            self.labels[0] = ['background', [0]]
-            self.labels[12] = ['noise', [3, 10, 11]]
-
     def get_part_arrays(self, parse, pose_data):
 
         ''' common processing for Ia and Sa
@@ -110,7 +107,7 @@ class VITONDataset(data.Dataset):
             separate hands from arms for upper
         '''
 
-        # 1. separate each labels  @TODO why float?
+        # 1. separate each labels
         parse_array = np.array(parse)
         parse_array[parse_array == 18] = 16  # left shoe 2 left leg
         parse_array[parse_array == 19] = 17  # right shoe 2 right leg
@@ -130,7 +127,6 @@ class VITONDataset(data.Dataset):
                        (parse_array == 18).astype(np.float32) +
                        (parse_array == 19).astype(np.float32))
 
-        # @TODO Do we need both foot and arm ?
 
         # get parse_hands and arms
         # if not bottom_agnostic
@@ -141,10 +137,10 @@ class VITONDataset(data.Dataset):
             pt_wrist = pose_data[pose_ids[1]]
             vec_arm = (pt_wrist - pt_elbow)
             len_arm = np.linalg.norm(pt_wrist - pt_elbow)
-            if len_arm != 0:  # @TODO  not 0 but quite small (what if invisible case?)
+            if len_arm != 0:
                 vec_arm /= len_arm
             vec_cut_arm = vec_arm[::-1] * np.array([1, -1])
-            if np.sum(parse_array == parse_id) == 0:  # @TODO ???
+            if np.sum(parse_array == parse_id) == 0:
                 parse_arms.append(np.zeros_like(parse_array))
                 parse_hands.append(np.zeros_like(parse_array))
                 continue
@@ -226,9 +222,10 @@ class VITONDataset(data.Dataset):
     def get_agnostic_mask(self, part_arrays, bottom_agnostic):
         '''
             merge mask regions
-            @TODO get a single array?
+
         '''
-        if bottom_agnostic:  # lower
+        self.bottom_agnostic = bottom_agnostic
+        if self.bottom_agnostic:  # lower
             parse_lower = part_arrays['parse_lower']
             parse_l_leg = part_arrays['parse_l_leg']
             parse_r_leg = part_arrays['parse_r_leg']
@@ -240,22 +237,6 @@ class VITONDataset(data.Dataset):
             parse_r_arm = part_arrays['parse_r_arm']
             mask_parts = [parse_neck, parse_l_arm, parse_r_arm, parse_upper]
         return mask_parts
-
-    def get_parse_agnostic(self, parse, part_arrays):
-        ''' convert S to Sa
-            img :  S (PI.Image)
-            parts_arrays:  dictonary for each label regions
-            return Sa (PIL.Image)
-        '''
-        # 0. make a clone
-        agnostic = parse.copy()
-        # 1. get a mask list
-        mask_parts = self.get_agnostic_mask(part_arrays, self.bottom_agnostic)
-        # 2. masking
-        for part in mask_parts:  # masking the regions
-            agnostic.paste(0, None, Image.fromarray(np.uint8(part * 255), 'L'))
-
-        return agnostic
 
     def get_img_agnostic(self, img, part_arrays):
 
@@ -270,15 +251,10 @@ class VITONDataset(data.Dataset):
         # 1. get mask list
         mask_parts = self.get_agnostic_mask(part_arrays, self.bottom_agnostic)
         # 2. inpaininting using backgound color
-        # @TODO: but Alias network may use GRAY color for hints for redrawing...
+
         parse_background = part_arrays['parse_background']
-        """        
-        mask = np.uint8(255 * (parse_background == 0))
-        radius = (np.sum(parse_background == 0) / np.pi)**0.5
-        background_inpainted = cv2.inpaint(
-            np.array(img), mask, radius, cv2.INPAINT_TELEA)
-        """
-        mask = parse_background < 1.0e-8  # get FG, @TODO parse_background is float32 ^^;
+
+        mask = parse_background < 1.0e-8  # get FG,
         background_inpainted = np.array(img)
         inpainting_color = np.mean(background_inpainted[mask == 0], axis=0)  # get average color of BG
         kernel = np.ones((3, 3), np.uint8)  # the kernel size
@@ -294,15 +270,6 @@ class VITONDataset(data.Dataset):
             agnostic_mask += parse
             agnostic.paste(background_inpainted, None, Image.fromarray(np.uint8(parse * 255), 'L'))
         agnostic_mask[agnostic_mask > 0.0] = 1.0
-        from matplotlib import pyplot as plt
-        # plt.imshow(agnostic_mask),plt.title('agnostic_mask'),plt.show()
-        """ 
-        # for checking 
-        import matplotlib.pyplot as plt
-        plt.title("img_agnostic")
-        plt.subplot(1, 2, 1), plt.imshow(np.array(img)),
-        plt.subplot(1, 2, 2), plt.imshow(np.array(agnostic)), plt.show()
-        """
 
         return agnostic, agnostic_mask
 
@@ -311,24 +278,6 @@ class VITONDataset(data.Dataset):
         ''' indexing operation: called batch_size for each iteration '''
 
         img_name = self.img_names[index]
-        c_name = {}
-        c = {}
-        cm = {}
-        for key in self.c_names:  # 'upaired' for test and  ('paried' for training? )
-            c_name[key] = self.c_names[key][index]
-            c[key] = Image.open(osp.join(self.data_path, 'cloth', c_name[key])).convert('RGB')  # C
-            c[key] = transforms.Resize(self.load_width, interpolation=2)(c[key])  # size to load_width, load_height?
-            if not self.dataset_etri:
-                cm[key] = Image.open(osp.join(self.data_path, 'cloth_mask', c_name[key]))  # Mc
-            else:
-                cm[key] = Image.open(osp.join(self.data_path, 'cloth_mask', c_name[key].replace('jpg', 'png')))  # Mc
-            cm[key] = transforms.Resize(self.load_width, interpolation=0)(cm[key])  # size to load_width, load_height?
-
-            c[key] = self.transform(c[key])  # [-1,1],  tensor and normalize
-            cm_array = np.array(cm[key])  # type of cm[key]?
-            cm_array = (cm_array >= 128).astype(np.float32)  # is range [0, 255]?
-            cm[key] = torch.from_numpy(cm_array)  # [0,1]
-            cm[key].unsqueeze_(0)  # in-memory
 
         # load pose image
         pose_name = img_name.replace('.jpg', '_rendered.png')
@@ -336,9 +285,6 @@ class VITONDataset(data.Dataset):
         img_width = pose_rgb.size[0]  # image width in saved file
         pose_rgb = transforms.Resize(self.load_width, interpolation=2)(pose_rgb)
         pose_rgb = self.transform(pose_rgb)  # [-1,1]
-        if False:  ### AHN: to  test the effects of rgb in pose image
-            # pose_rgb[:,:,:] = 0.0 # black out pose
-            pose_rgb[:, :, :] = (pose_rgb[0, :, :] + pose_rgb[1, :, :] + pose_rgb[2, :, :]) / 3.0  # rgb to gray pose
 
         pose_name = img_name.replace('.jpg', '_keypoints.json')
         with open(osp.join(self.data_path, 'openpose_json', pose_name), 'r') as f:
@@ -350,167 +296,87 @@ class VITONDataset(data.Dataset):
             if self.load_width != img_width:  # compare only width assuming same aspect ratio
                 pose_data[:, :2] = pose_data[:, :2] * (self.load_width / img_width)
 
-                # load parsing image
+        # load parsing image
         parse_name = img_name.replace('.jpg', '.png')
         parse = Image.open(osp.join(self.data_path, 'img_parse', parse_name))
         parse = transforms.Resize(self.load_width, interpolation=0)(parse)
-        part_arrays = self.get_part_arrays(parse, pose_data)
-        parse_agnostic = self.get_parse_agnostic(parse, part_arrays)
-        parse_agnostic = torch.from_numpy(np.array(parse_agnostic)[None]).long()  # None? why long?
 
-        parse_agnostic_map = torch.zeros(20, self.load_height, self.load_width,
-                                         dtype=torch.float)  # 20 labels input CHIP PGN
-        parse_agnostic_map.scatter_(0, parse_agnostic, 1.0)  # one-hot-encoding
-        new_parse_agnostic_map = torch.zeros(self.semantic_nc, self.load_height, self.load_width, dtype=torch.float)
-        for i in range(len(self.labels)):  # merging labels into 20 to 13
+        parse_long = torch.from_numpy(np.array(parse)[None]).long()  # None? why long?
+        parse_gt_map = torch.zeros(20, self.load_height, self.load_width, dtype=torch.float)
+        parse_gt_map.scatter_(0, parse_long, 1.0)  # one hot encoding
+        new_parse_gt_map = torch.zeros(self.semantic_nc, self.load_height, self.load_width, dtype=torch.float)
+        for i in range(len(self.labels)):
             for label in self.labels[i][1]:
-                new_parse_agnostic_map[i] += parse_agnostic_map[label]
+                new_parse_gt_map[i] += parse_gt_map[label]
+        if self.bottom_agnostic:
+            labels = {
+                0: ['background', [0]],
+                1: ['paste', [2, 3, 7, 8, 9, 10, 11]],  # ????
+                2: ['bottom', [4]],  # torso?
+                3: ['hair', [1]],
+                4: ['left_arm', [5]],
+                5: ['right_arm', [6]],
+                6: ['noise', [12]]  # what is noise?
+            }
+        else:
+            labels = {
+                0: ['background', [0]],
+                1: ['paste', [2, 4, 7, 8, 9, 10, 11]],  # ????
+                2: ['top', [3]],  # torso?
+                3: ['hair', [1]],
+                4: ['left_arm', [5]],
+                5: ['right_arm', [6]],
+                6: ['noise', [12]]  # what is noise?
+            }
 
-        ######## AHN: making one-hot-ended S (nc = 13 labels)####
-        if self.useSgt:
-            parse_long = torch.from_numpy(np.array(parse)[None]).long()  # None? why long?
-            parse_gt_map = torch.zeros(20, self.load_height, self.load_width, dtype=torch.float)
-            parse_gt_map.scatter_(0, parse_long, 1.0)  # one hot encoding
-            new_parse_gt_map = torch.zeros(self.semantic_nc, self.load_height, self.load_width, dtype=torch.float)
-            for i in range(len(self.labels)):
-                for label in self.labels[i][1]:
-                    new_parse_gt_map[i] += parse_gt_map[label]
+        parse_final = torch.zeros(7, self.load_height, self.load_width, dtype=torch.float)
+
+        for j in range(len(labels)):
+            for label in labels[j][1]:
+                parse_final[j] += new_parse_gt_map[label]
 
         # load person image
         img = Image.open(osp.join(self.data_path, 'img', img_name))
         img = transforms.Resize(self.load_width, interpolation=2)(img)
+        part_arrays = self.get_part_arrays(parse, pose_data)
         img_agnostic, agnostic_mask = self.get_img_agnostic(img, part_arrays)
         img = self.transform(img)
-        # agnostic_mask = self.transform(agnostic_mask)
+
         img_agnostic = self.transform(img_agnostic)  # [-1,1]
         agnostic_mask = torch.tensor(agnostic_mask[np.newaxis, :, :])
-        # print(agnostic_mask.size())
+
+        '''# get warp cloth
+        cloth_mask = ((parse_final[2].numpy() > 0) *255).astype(np.uint8)
+        #conture 구하고 그 점들을 가지고 랜덤 크기의 점 그리기 그리고 그 점들을 빼기
+        contour, _ = cv2.findContours(cloth_mask, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
+        canvas = np.zeros_like(cloth_mask)
+        for i in contour:
+            for j in i:
+                r = (2*np.abs(np.random.f(dfnum=5, dfden=10))).astype(np.uint8)
+                cv2.circle(canvas, tuple(j[0]), r, 255, -1)
+        align_mask = ((cloth_mask.astype(np.int32) - canvas.astype(np.int32)) > 0)*1
+        misalign_mask = (((parse_final[2].numpy()>0)*1 - align_mask)>0)*1
+
+        plt.subplot(2,2,1),plt.imshow(cloth_mask),plt.title('cloth_mask')
+        plt.subplot(2,2,2),plt.imshow(canvas),plt.title('remove_region')
+        plt.subplot(2,2,3),plt.imshow(align_mask),plt.title('align_mask')
+        plt.subplot(2,2,4),plt.imshow(misalign_mask),plt.title('misalign_mask')
+        plt.show()'''
+
+        #ground truth cloth mask affine(perspective?) transform->compare with original cloth mask -> mask misalign region in random
+
         result = {
             'img_name': img_name,
-            'c_name': c_name,
-            'img': img,
+            'img_gt': img,
             'img_agnostic': img_agnostic,
-            'parse_agnostic': new_parse_agnostic_map,
             'pose': pose_rgb,
-            'cloth': c,
-            'cloth_mask': cm,
             'agnostic_mask': agnostic_mask
         }
-        if self.useSgt:
-            result['parse_gt'] = new_parse_gt_map  #### AHN: for training  ####
 
         return result
 
     def __len__(self):
         return len(self.img_names)
-
-    '''
-    # now we use simpler ways 
-    def resize_pose(self, pose):
-
-        if (self.load_width == self.input_width) and (self.load_height == self.input_height):
-            return  # nothing to do 
-
-
-        peoples = pose['people']
-        for people in peoples:
-            for keys in ["pose_keypoints_2d", "face_keypoints_2d", "hand_left_keypoints_2d", "hand_right_keypoints_2d"]:
-                keypoints = people[keys]
-                assert(len(keypoints)%3 == 0)  # x, y, confidence
-                for i in range(len(keypoints)//3):
-                    keypoints[3*i] *= (self.load_width/self.input_width)  # horizontal
-                    keypoints[3*i+1] *= (self.load_height/self.input_height)  # vertical
-                    # not chnage confidence value
-
-                     def get_parse_agnostic_old(self, parse, pose_data):
-
-        # convert S to Sa using P 
-
-        parse_array = np.array(parse)
-        parse_upper = ((parse_array == 5).astype(np.float32) +
-                       (parse_array == 6).astype(np.float32) +
-                       (parse_array == 7).astype(np.float32))
-        parse_neck = (parse_array == 10).astype(np.float32)
-
-        r = 10
-        agnostic = parse.copy()
-
-        # mask arms
-        for parse_id, pose_ids in [(14, [2, 5, 6, 7]), (15, [5, 2, 3, 4])]:
-            mask_arm = Image.new('L', (self.load_width, self.load_height), 'black')
-            mask_arm_draw = ImageDraw.Draw(mask_arm)
-            i_prev = pose_ids[0]
-            for i in pose_ids[1:]:
-                if (pose_data[i_prev, 0] == 0.0 and pose_data[i_prev, 1] == 0.0) or (pose_data[i, 0] == 0.0 and pose_data[i, 1] == 0.0):
-                    continue
-                mask_arm_draw.line([tuple(pose_data[j]) for j in [i_prev, i]], 'white', width=r*10)
-                pointx, pointy = pose_data[i]
-                radius = r*4 if i == pose_ids[-1] else r*15
-                mask_arm_draw.ellipse((pointx-radius, pointy-radius, pointx+radius, pointy+radius), 'white', 'white')
-                i_prev = i
-            parse_arm = (np.array(mask_arm) / 255) * (parse_array == parse_id).astype(np.float32)
-            agnostic.paste(0, None, Image.fromarray(np.uint8(parse_arm * 255), 'L'))
-
-        # mask torso & neck
-        agnostic.paste(0, None, Image.fromarray(np.uint8(parse_upper * 255), 'L'))
-        agnostic.paste(0, None, Image.fromarray(np.uint8(parse_neck * 255), 'L'))
-
-        return agnostic
-
-    def get_img_agnostic_old(self, img, parse, pose_data):
-
-        # converting I to Ia using P 
-
-        parse_array = np.array(parse)
-        parse_head = ((parse_array == 4).astype(np.float32) +
-                      (parse_array == 13).astype(np.float32))
-        parse_lower = ((parse_array == 9).astype(np.float32) +
-                       (parse_array == 12).astype(np.float32) +
-                       (parse_array == 16).astype(np.float32) +
-                       (parse_array == 17).astype(np.float32) +
-                       (parse_array == 18).astype(np.float32) +
-                       (parse_array == 19).astype(np.float32))
-
-        r = 10 #20
-        agnostic = img.copy()
-        agnostic_draw = ImageDraw.Draw(agnostic)
-
-        length_a = np.linalg.norm(pose_data[5] - pose_data[2])
-        length_b = np.linalg.norm(pose_data[12] - pose_data[9])
-        point = (pose_data[9] + pose_data[12]) / 2
-        pose_data[9] = point + (pose_data[9] - point) / length_b * length_a
-        pose_data[12] = point + (pose_data[12] - point) / length_b * length_a
-
-        # mask arms
-        agnostic_draw.line([tuple(pose_data[i]) for i in [2, 5]], 'gray', width=r*10)
-        for i in [2, 5]:
-            pointx, pointy = pose_data[i]
-            agnostic_draw.ellipse((pointx-r*5, pointy-r*5, pointx+r*5, pointy+r*5), 'gray', 'gray')
-        for i in [3, 4, 6, 7]:
-            if (pose_data[i - 1, 0] == 0.0 and pose_data[i - 1, 1] == 0.0) or (pose_data[i, 0] == 0.0 and pose_data[i, 1] == 0.0):
-                continue
-            agnostic_draw.line([tuple(pose_data[j]) for j in [i - 1, i]], 'gray', width=r*10)
-            pointx, pointy = pose_data[i]
-            agnostic_draw.ellipse((pointx-r*5, pointy-r*5, pointx+r*5, pointy+r*5), 'gray', 'gray')
-
-        # mask torso
-        for i in [9, 12]:
-            pointx, pointy = pose_data[i]
-            agnostic_draw.ellipse((pointx-r*3, pointy-r*6, pointx+r*3, pointy+r*6), 'gray', 'gray')
-        agnostic_draw.line([tuple(pose_data[i]) for i in [2, 9]], 'gray', width=r*6)
-        agnostic_draw.line([tuple(pose_data[i]) for i in [5, 12]], 'gray', width=r*6)
-        agnostic_draw.line([tuple(pose_data[i]) for i in [9, 12]], 'gray', width=r*12)
-        agnostic_draw.polygon([tuple(pose_data[i]) for i in [2, 5, 12, 9]], 'gray', 'gray')
-
-        # mask neck
-        pointx, pointy = pose_data[1]
-        agnostic_draw.rectangle((pointx-r*7, pointy-r*7, pointx+r*7, pointy+r*7), 'gray', 'gray')
-        agnostic.paste(img, None, Image.fromarray(np.uint8(parse_head * 255), 'L'))
-        agnostic.paste(img, None, Image.fromarray(np.uint8(parse_lower * 255), 'L'))
-
-        return agnostic
-
-    '''
 
 
 class VITONDataLoader:
