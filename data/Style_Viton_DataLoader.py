@@ -343,7 +343,7 @@ class VITONDataset(data.Dataset):
         img = self.transform(img)
 
         img_agnostic = self.transform(img_agnostic)  # [-1,1]
-        agnostic_mask = torch.tensor(agnostic_mask[np.newaxis, :, :])
+        agnostic_mask = torch.tensor(agnostic_mask[np.newaxis, :, :]).type(torch.float32)
 
         '''# get warp cloth
         cloth_mask = ((parse_final[2].numpy() > 0) *255).astype(np.uint8)
@@ -364,18 +364,55 @@ class VITONDataset(data.Dataset):
         plt.show()'''
 
         #ground truth cloth mask affine(perspective?) transform->compare with original cloth mask -> mask misalign region in random
+        cloth_mask = ((parse_final[2].numpy() > 0) * 255).astype(np.uint8)
+        warped_cloth = np.transpose(((img.numpy()+1)/2*255).astype(np.uint8),(1,2,0))
+        warped_cloth[(parse_final[2].numpy() == 0)] = 0
+
+        scale = 0.025
+        s_x, s_y, d_x, d_y, theta = (np.random.rand(5) - 0.5) * 2  # s_x,s_y,d_x,d_y,theta
+        s_x = 1 + scale * s_x * 2
+        s_y = 1 + scale * s_y * 2
+        d_x = (cloth_mask.shape[0] * scale * d_x).astype(np.int16)
+        d_y = (cloth_mask.shape[1] * scale * d_y).astype(np.int16)
+        theta = np.pi * scale * theta
+        M = np.array([[1.0, 0.0, -cloth_mask.shape[1] / 2], [0.0, 1.0, -cloth_mask.shape[0] / 2], [0.0, 0.0, 1.0]])
+        M = np.array([[s_x, 0.0, 0.0], [0.0, s_y, 0.0], [0.0, 0.0, 1.0]]) @ M
+        M = np.array([[np.cos(theta), -np.sin(theta), d_x], [np.sin(theta), np.cos(theta), d_y], [0.0, 0.0, 1.0]]) @ M
+        M = np.array([[1.0, 0.0, cloth_mask.shape[1] / 2], [0.0, 1.0, cloth_mask.shape[0] / 2], [0.0, 0.0, 1.0]]) @ M
+        M = M[:2, :]
+        cloth_mask_affine = cv2.warpAffine(cloth_mask, M, (cloth_mask.shape[1], cloth_mask.shape[0]))
+        warped_cloth = cv2.warpAffine(warped_cloth,M,(cloth_mask.shape[1], cloth_mask.shape[0]))
+        misalign_mask = cloth_mask - cloth_mask_affine
+        misalign_mask[misalign_mask < 255.0] = 0.0
+
+        '''plt.subplot(1, 3, 1), plt.imshow(cloth_mask_affine), plt.title('cloth_mask_affine')
+        plt.subplot(1, 3, 2), plt.imshow(warped_cloth), plt.title('warped_cloth')
+        plt.subplot(1, 3, 3), plt.imshow(misalign_mask), plt.title('misalign_mask')
+        plt.show()'''
+
+        misalign_mask = torch.tensor(misalign_mask[np.newaxis, :, :]/255*2-1).type(torch.float32)
+        warped_cloth = torch.tensor(np.transpose(warped_cloth,(2,0,1))/255*2-1).type(torch.float32)
+        parse_div = torch.cat((parse_final, misalign_mask), dim=0)
+        parse_div[2:3] -= misalign_mask
+
 
         result = {
             'img_name': img_name,
-            'img_gt': img,
+            'ground_truth_image': img,
             'img_agnostic': img_agnostic,
             'pose': pose_rgb,
-            'agnostic_mask': agnostic_mask
+            'agnostic_mask': agnostic_mask,
+            'warped_c': warped_cloth,
+            'parse': parse_final,
+            'parse_div':parse_div,
+            'misalign_mask':misalign_mask
         }
+
 
         return result
 
     def __len__(self):
+
         return len(self.img_names)
 
 
@@ -409,7 +446,6 @@ class VITONDataLoader:
         return 0
 
     def __len__(self):
-        print(len(self.dataset))
-        return 0
+        return len(self.dataset)
 
 

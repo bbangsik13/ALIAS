@@ -82,14 +82,14 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
 
         if once: # checking input 
             once = False
-            print("Ia:{}".format(data['img_agnostic'].size()))
-            print("P:{}".format(data['pose'].size()))
-            print("Wc:{}".format(data['warped_c'].size()))
-            print("M_a:{}".format(data['agnostic_mask'].size()))
-            print("S:{}".format(data['parse'].size()))
-            print("Sdiv:{}".format(data['parse_div'].size()))
-            print("Mdiv:{}".format(data['misalign_mask'].size()))
-            print("gt:{}".format(data['ground_truth_image'].size()))
+            print("Ia:{}".format(data['img_agnostic'].size()),"dtype: ", data['img_agnostic'].dtype)
+            print("P:{}".format(data['pose'].size()),"dtype: ", data['pose'].dtype)
+            print("Wc:{}".format(data['warped_c'].size()),"dtype: ", data['warped_c'].dtype)
+            print("M_a:{}".format(data['agnostic_mask'].size()),"dtype: ", data['agnostic_mask'].dtype)
+            print("S:{}".format(data['parse'].size()),"dtype: ", data['parse'].dtype)
+            print("Sdiv:{}".format(data['parse_div'].size()),"dtype: ", data['parse_div'].dtype)
+            print("Mdiv:{}".format(data['misalign_mask'].size()),"dtype: ", data['misalign_mask'].dtype)
+            print("gt:{}".format(data['ground_truth_image'].size()),"dtype: ", data['ground_truth_image'].dtype)
             
 
         Ia = Variable(data['img_agnostic'])

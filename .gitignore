@@ -1,0 +1,4 @@
+#ignore checkpoints(file size is too big)
+/checkpoints
+#ignore dataset(file size is too big)
+/dataset
