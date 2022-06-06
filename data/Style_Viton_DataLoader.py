@@ -281,13 +281,13 @@ class VITONDataset(data.Dataset):
 
         # load pose image
         pose_name = img_name.replace('.jpg', '_rendered.png')
-        pose_rgb = Image.open(osp.join(self.data_path, 'openpose_img', pose_name))  # not json but image
+        pose_rgb = Image.open(osp.join(self.data_path, 'openpose-img', pose_name))  # not json but image
         img_width = pose_rgb.size[0]  # image width in saved file
         pose_rgb = transforms.Resize(self.load_width, interpolation=2)(pose_rgb)
         pose_rgb = self.transform(pose_rgb)  # [-1,1]
 
         pose_name = img_name.replace('.jpg', '_keypoints.json')
-        with open(osp.join(self.data_path, 'openpose_json', pose_name), 'r') as f:
+        with open(osp.join(self.data_path, 'openpose-json', pose_name), 'r') as f:
             pose_label = json.load(f)
             # self.resize_pose(pose_label) # (192x256) to load_width, load_height
             pose_data = pose_label['people'][0]['pose_keypoints_2d']
@@ -298,7 +298,7 @@ class VITONDataset(data.Dataset):
 
         # load parsing image
         parse_name = img_name.replace('.jpg', '.png')
-        parse = Image.open(osp.join(self.data_path, 'img_parse', parse_name))
+        parse = Image.open(osp.join(self.data_path, 'img-parse', parse_name))
         parse = transforms.Resize(self.load_width, interpolation=0)(parse)
 
         parse_long = torch.from_numpy(np.array(parse)[None]).long()  # None? why long?
@@ -405,7 +405,8 @@ class VITONDataset(data.Dataset):
             'warped_c': warped_cloth,
             'parse': parse_final,
             'parse_div':parse_div,
-            'misalign_mask':misalign_mask
+            'misalign_mask':misalign_mask,
+            'index':index
         }
 
 
