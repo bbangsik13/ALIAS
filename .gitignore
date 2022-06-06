@@ -2,3 +2,5 @@
 /checkpoints
 #ignore dataset(file size is too big)
 /dataset
+#ignore shell_file(local vs AI server)
+train.sh

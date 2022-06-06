@@ -82,14 +82,14 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
 
         if once: # checking input 
             once = False
-            print("Ia:{}".format(data['img_agnostic'].size()),"dtype: ", data['img_agnostic'].dtype)
-            print("P:{}".format(data['pose'].size()),"dtype: ", data['pose'].dtype)
-            print("Wc:{}".format(data['warped_c'].size()),"dtype: ", data['warped_c'].dtype)
-            print("M_a:{}".format(data['agnostic_mask'].size()),"dtype: ", data['agnostic_mask'].dtype)
-            print("S:{}".format(data['parse'].size()),"dtype: ", data['parse'].dtype)
-            print("Sdiv:{}".format(data['parse_div'].size()),"dtype: ", data['parse_div'].dtype)
-            print("Mdiv:{}".format(data['misalign_mask'].size()),"dtype: ", data['misalign_mask'].dtype)
-            print("gt:{}".format(data['ground_truth_image'].size()),"dtype: ", data['ground_truth_image'].dtype)
+            print("Ia:{}".format(data['img_agnostic'].size()),"dtype: ", data['img_agnostic'].dtype,torch.max(data['img_agnostic']),torch.min(data['img_agnostic']))
+            print("P:{}".format(data['pose'].size()),"dtype: ", data['pose'].dtype,torch.max(data['pose']),torch.min(data['pose']))
+            print("Wc:{}".format(data['warped_c'].size()),"dtype: ", data['warped_c'].dtype,torch.max(data['warped_c']),torch.min(data['warped_c']))
+            print("M_a:{}".format(data['agnostic_mask'].size()),"dtype: ", data['agnostic_mask'].dtype,torch.max(data['agnostic_mask']),torch.min(data['agnostic_mask']))
+            print("S:{}".format(data['parse'].size()),"dtype: ", data['parse'].dtype,torch.max(data['parse']),torch.min(data['parse']))
+            print("Sdiv:{}".format(data['parse_div'].size()),"dtype: ", data['parse_div'].dtype,torch.max(data['parse_div']),torch.min(data['parse_div']))
+            print("Mdiv:{}".format(data['misalign_mask'].size()),"dtype: ", data['misalign_mask'].dtype,torch.max(data['misalign_mask']),torch.min(data['misalign_mask']))
+            print("gt:{}".format(data['ground_truth_image'].size()),"dtype: ", data['ground_truth_image'].dtype,torch.max(data['ground_truth_image']),torch.min(data['ground_truth_image']))
             
 
         Ia = Variable(data['img_agnostic'])
@@ -102,6 +102,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         Igt  = Variable(data['ground_truth_image'])
 
         losses, generated = model(Ia, P, Wc, S, Sdiv, Mdiv,Ma ,Igt, infer=save_fake)
+        #print(torch.unique(generated))
         # sum per device losses
         losses = [torch.mean(x) if not isinstance(x, int) else x for x in losses]
         loss_dict = dict(zip(model.module.loss_names, losses))

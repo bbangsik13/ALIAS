@@ -383,7 +383,7 @@ class VITONDataset(data.Dataset):
         cloth_mask_affine = cv2.warpAffine(cloth_mask, M, (cloth_mask.shape[1], cloth_mask.shape[0]))
         warped_cloth = cv2.warpAffine(warped_cloth,M,(cloth_mask.shape[1], cloth_mask.shape[0]))
         misalign_mask = cloth_mask - cloth_mask_affine
-        misalign_mask[misalign_mask < 255.0] = 0.0
+
 
         '''plt.subplot(1, 3, 1), plt.imshow(cloth_mask_affine), plt.title('cloth_mask_affine')
         plt.subplot(1, 3, 2), plt.imshow(warped_cloth), plt.title('warped_cloth')
@@ -391,6 +391,7 @@ class VITONDataset(data.Dataset):
         plt.show()'''
 
         misalign_mask = torch.tensor(misalign_mask[np.newaxis, :, :]/255*2-1).type(torch.float32)
+        misalign_mask[misalign_mask<0]=0
         warped_cloth = torch.tensor(np.transpose(warped_cloth,(2,0,1))/255*2-1).type(torch.float32)
         parse_div = torch.cat((parse_final, misalign_mask), dim=0)
         parse_div[2:3] -= misalign_mask
