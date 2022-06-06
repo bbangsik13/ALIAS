@@ -370,10 +370,10 @@ class VITONDataset(data.Dataset):
 
         scale = 0.025
         s_x, s_y, d_x, d_y, theta = (np.random.rand(5) - 0.5) * 2  # s_x,s_y,d_x,d_y,theta
-        s_x = 1 + scale * s_x * 2
-        s_y = 1 + scale * s_y * 2
-        d_x = (cloth_mask.shape[0] * scale * d_x).astype(np.int16)
-        d_y = (cloth_mask.shape[1] * scale * d_y).astype(np.int16)
+        s_x = 1 + abs(scale) * s_x * -2
+        s_y = 1 + abs(scale) * s_y * -2
+        d_x = 0#(cloth_mask.shape[0] * scale * d_x).astype(np.int16)
+        d_y = 0#(cloth_mask.shape[1] * scale * d_y).astype(np.int16)
         theta = np.pi * scale * theta
         M = np.array([[1.0, 0.0, -cloth_mask.shape[1] / 2], [0.0, 1.0, -cloth_mask.shape[0] / 2], [0.0, 0.0, 1.0]])
         M = np.array([[s_x, 0.0, 0.0], [0.0, s_y, 0.0], [0.0, 0.0, 1.0]]) @ M
@@ -391,11 +391,10 @@ class VITONDataset(data.Dataset):
         plt.show()'''
 
         misalign_mask = torch.tensor(misalign_mask[np.newaxis, :, :]/255*2-1).type(torch.float32)
-        misalign_mask[misalign_mask<0]=0
+        misalign_mask[misalign_mask<1.0]=0
         warped_cloth = torch.tensor(np.transpose(warped_cloth,(2,0,1))/255*2-1).type(torch.float32)
         parse_div = torch.cat((parse_final, misalign_mask), dim=0)
         parse_div[2:3] -= misalign_mask
-
 
         result = {
             'img_name': img_name,
