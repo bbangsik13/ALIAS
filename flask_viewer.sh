@@ -1,5 +1,5 @@
 # test result 
-echo http://125.6.38.24:8008/
+echo http://125.6.38.24:8006/
 #python flask_viewer.py 8009 checkpoints/mpv_half/web/images
 # as same as test with bs = 1 
 #python flask_viewer.py 8009 checkpoints/mpv_half_1/web/images
@@ -11,4 +11,4 @@ echo http://125.6.38.24:8008/
 #ETRI bot
 #python flask_viewer.py 8010 checkpoints/ETRI-Bot_new_L1/web/images
 #MPV TOP mfpng
-python flask_viewer.py 8008 checkpoints/no_warp_test/web/images
+python flask_viewer.py 8006 checkpoints/no_warp_test/web/images
