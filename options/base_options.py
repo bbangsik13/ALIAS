@@ -18,6 +18,7 @@ class BaseOptions():
         self.parser.add_argument('--use_dropout', action='store_true', help='use dropout for the generator')
         self.parser.add_argument('--data_type', default=32, type=int, choices=[8, 16, 32], help="Supported data type i.e. 8, 16, 32 bit")
         self.parser.add_argument('--verbose', action='store_true', default=False, help='toggles verbose')
+        self.parser.add_argument('--print_network', action='store_true', default=False, help='print_network')
 
 
 
@@ -43,7 +44,7 @@ class BaseOptions():
 
         # for generator
         self.parser.add_argument('--netG', type=str, default='global', help='selects model to use for netG')
-        self.parser.add_argument('--ngf', type=int, default=64, help='# of gen filters in first conv layer')
+        self.parser.add_argument('--ngf', type=int, default=32, help='# of gen filters in first conv layer')
         self.parser.add_argument('--n_downsample_global', type=int, default=4, help='number of downsampling layers in netG') 
         self.parser.add_argument('--n_blocks_global', type=int, default=9, help='number of residual blocks in the global generator network')
         self.parser.add_argument('--n_blocks_local', type=int, default=3, help='number of residual blocks in the local enhancer network')
@@ -104,6 +105,7 @@ class BaseOptions():
 
         # for ALIASGenerator
         self.parser.add_argument('--use_alias', action='store_true')
+        self.parser.add_argument('--inpaint', action='store_true')
         #self.parser.add_argument('--norm_G', type=str, default='spectralaliasinstance')
         #self.parser.add_argument('--ngf', type=int, default=64, help='# of generator filters in the first conv layer')
         '''self.parser.add_argument('--num_upsampling_layers', choices=['normal', 'more', 'most'], default='most',

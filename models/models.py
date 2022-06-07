@@ -7,7 +7,9 @@ def create_model(opt):
             model = Pix2PixHDModel()
         else:
             model = InferenceModel()
-
+    if opt.inpaint:
+        from .inpaint_model import inpaint_model
+        model = inpaint_model()
     model.initialize(opt)
     if opt.verbose:
         print("model [%s] was created" % (model.name()))
