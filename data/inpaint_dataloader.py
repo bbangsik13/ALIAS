@@ -404,6 +404,7 @@ class inpaint_dataset(data.Dataset):
         misalign_mask[misalign_mask<1.0]=0
         warped_cloth = torch.tensor(np.transpose(warped_cloth,(2,0,1))/255*2-1).type(torch.float32)
         parse_inpaint = torch.cat((parse_final,agnostic_mask), dim=0)
+        #plt.imshow(np.transpose(np.array(parse_inpaint[:3]),(1,2,0))),plt.show()
         #plt.imshow(np.transpose(((np.array(img_agnostic)+1)/2*255).astype(np.uint8),(1,2,0))),plt.show()
         #parse_div[2:3] -= misalign_mask
 

@@ -124,7 +124,7 @@ class inpaint_model(BaseModel):
 
         # heejune added L1 for testing
         loss_G_L1 = 0
-        if not self.opt.no_L1_loss:
+        '''if not self.opt.no_L1_loss:
             L1_loss = torch.nn.L1Loss()
             M_align = parse_div[:, 2:3, :, :] - misalign_mask  # - parse_div[:,6,:,:]
             M_align = torch.tile(M_align, (1, 3, 1, 1))
@@ -134,7 +134,11 @@ class inpaint_model(BaseModel):
             L1_real_image[M_align > 0.0] = L1_warp_cloth[M_align > 0.0]
             M_generate = agnostic_mask - M_align
             L1_real_image[M_generate > 0.0] = L1_fake_image[M_generate > 0.0]
-            loss_G_L1 = L1_loss(L1_fake_image, L1_real_image) * 4 * self.opt.lambda_feat
+            loss_G_L1 = L1_loss(L1_fake_image, L1_real_image) * 4 * self.opt.lambda_feat'''
+        if not self.opt.no_L1_loss:
+            L1_loss = torch.nn.L1Loss()
+            loss_G_L1 = L1_loss(fake_image,ground_truth_image)
+
         return [self.loss_filter(loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake, loss_G_L1),
                 fake_image]
 

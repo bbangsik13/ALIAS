@@ -64,7 +64,7 @@ once = True  # run once
 once2 = True
 
 # 4. epoch loop (fixed lr period and 
-for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
+for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay + 1):
     epoch_start_time = time.time()
     if epoch != start_epoch:
         epoch_iter = epoch_iter % dataset_size
@@ -131,9 +131,12 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         losses = [torch.mean(x) if not isinstance(x, int) else x for x in losses]
         loss_dict = dict(zip(model.module.loss_names, losses))
         # calculate final loss scalar
-        loss_D = (loss_dict['D_fake'] + loss_dict['D_real']) * 0.5
-        loss_G = loss_dict['G_GAN'] + loss_dict.get('G_GAN_Feat',0) + loss_dict.get('G_VGG',0) + loss_dict.get('G_L1', 0)
-
+        if epoch>opt.niter_stable:
+            loss_D = (loss_dict['D_fake'] + loss_dict['D_real']) * 0.5
+            loss_G = loss_dict['G_GAN'] + loss_dict.get('G_GAN_Feat',0) + loss_dict.get('G_VGG',0) + loss_dict.get('G_L1', 0) * 0
+        else:
+            loss_D = (loss_dict['D_fake'] + loss_dict['D_real']) *0
+            loss_G = loss_dict['G_GAN'] * 0 + loss_dict.get('G_GAN_Feat',0) * 0 + loss_dict.get('G_VGG',0) + loss_dict.get('G_L1', 0)
         ############### Backward Pass ####################
         # update generator weights
         optimizer_G.zero_grad()
@@ -214,10 +217,9 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         if epoch_iter >= dataset_size:
             break
        
-    # end of epoch 
-    iter_end_time = time.time()
+    # end of epoch
     print('End of epoch %d / %d \t Time Taken: %d sec' %
-          (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))
+          (epoch, opt.niter+ opt.niter_stable + opt.niter_decay, time.time() - epoch_start_time))
 
     ### save model for this epoch
     if epoch % opt.save_epoch_freq == 0:
@@ -227,7 +229,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         np.savetxt(iter_path, (epoch+1, 0), delimiter=',', fmt='%d')
 
     ### linearly decay learning rate after certain iterations
-    if epoch > opt.niter:
+    if epoch > opt.niter + opt.niter_stable:
         model.module.update_learning_rate()
     #call(["nvidia-smi", "--format=csv", "--query-gpu=memory.used,memory.free"])
 

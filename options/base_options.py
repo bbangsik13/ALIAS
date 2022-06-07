@@ -67,8 +67,8 @@ class BaseOptions():
         #self.parser.add_argument('--name', type=str, required=True)
         self.parser.add_argument('--port', type=int, default=80)  # http service port
 
-        self.parser.add_argument('-b', '--batch_size', type=int, default=1)
-        self.parser.add_argument('-j', '--workers', type=int, default=1)
+
+
         #self.parser.add_argument('--load_height', type=int, default=1024)
         #self.parser.add_argument('--load_width', type=int, default=768)
         #self.parser.add_argument('--input_height', type=int, default=1024)
@@ -77,7 +77,7 @@ class BaseOptions():
 
         #self.parser.add_argument('--dataset_dir', type=str, default='./datasets/')
         self.parser.add_argument('--dataset_mode', type=str, default='train')
-        self.parser.add_argument('--dataset_list', type=str, default='botomClothCatalog.txt')
+        self.parser.add_argument('--dataset_list', type=str, default='bottomClothCatalog.txt')
         self.parser.add_argument('--cloth_list_bottom', type=str, default='bottoms.txt')
         self.parser.add_argument('--bottom_agnostic', action='store_true', help='top agnostic or bottom agnostic')
         self.parser.add_argument('--dataset_etri', action='store_true', help='to solve etri dataset issue')

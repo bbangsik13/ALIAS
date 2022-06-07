@@ -48,3 +48,5 @@ class TrainOptions(BaseOptions):
         self.parser.add_argument('--semantic_nc', type=int, default=13, help='# of human-parsing map classes')
         self.parser.add_argument('--no_L1_loss', action='store_true', help='if specified, do *not* use L1 loss')
         self.parser.add_argument('--swap_warped_cloth', action='store_true', help='swap warped cloth to ground truth cloth')
+        self.parser.add_argument('-j', '--workers', type=int, default=1)
+        self.parser.add_argument('--niter_stable', type=int, default=0)
