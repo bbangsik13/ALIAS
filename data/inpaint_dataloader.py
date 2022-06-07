@@ -436,7 +436,7 @@ class inpaint_dataloader:
             train_sampler = None
 
         self.data_loader = data.DataLoader(
-            dataset, batch_size=opt.batch_size, shuffle=(train_sampler is None),
+            dataset, batch_size=opt.batchSize, shuffle=(train_sampler is None),
             num_workers=opt.workers, pin_memory=True, drop_last=True, sampler=train_sampler
         )
         self.dataset = dataset
