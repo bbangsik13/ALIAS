@@ -52,7 +52,7 @@ class inpaint_dataset(data.Dataset):
 
     def __init__(self, opt):
         super(inpaint_dataset, self).__init__()
-
+        self.opt = opt
         self.useSgt = True
         self.mode = opt.dataset_mode  # train or test
         self.dataset_etri = opt.dataset_etri
@@ -82,8 +82,7 @@ class inpaint_dataset(data.Dataset):
                 c_names.append(c_name)
 
         self.img_names = img_names
-        self.c_names = dict()
-        self.c_names['unpaired'] = c_names  # for testing
+        self.c_name =c_names[0]
         self.labels = {  ##  compressing CHIP PGN to VITON's ##########
             0: ['background', [0]],
             1: ['hair', [1, 2]],
@@ -354,29 +353,30 @@ class inpaint_dataset(data.Dataset):
         img_agnostic = self.transform(img_agnostic)  # [-1,1]
         agnostic_mask = torch.tensor(agnostic_mask[np.newaxis, :, :]).type(torch.float32)
 
-        '''# get warp cloth
-        cloth_mask = ((parse_final[2].numpy() > 0) *255).astype(np.uint8)
-        #conture 구하고 그 점들을 가지고 랜덤 크기의 점 그리기 그리고 그 점들을 빼기
-        contour, _ = cv2.findContours(cloth_mask, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
-        canvas = np.zeros_like(cloth_mask)
-        for i in contour:
-            for j in i:
-                r = (2*np.abs(np.random.f(dfnum=5, dfden=10))).astype(np.uint8)
-                cv2.circle(canvas, tuple(j[0]), r, 255, -1)
-        align_mask = ((cloth_mask.astype(np.int32) - canvas.astype(np.int32)) > 0)*1
-        misalign_mask = (((parse_final[2].numpy()>0)*1 - align_mask)>0)*1
+        if self.opt.use_warped_cloth:
+            warped_name = img_name.split('.')[0]+"_"+ self.c_name.split('.')[0]+".npy"
+            warped_cloth = torch.tensor(np.load(osp.join(self.opt.warped_cloth_dir,'warped_c',warped_name))[0,:,:,:]).type(torch.float32)
+            misalign_mask = torch.tensor(np.load(osp.join(self.opt.warped_cloth_dir,'misalign_mask',warped_name))[0,:,:,:]).type(torch.float32)
 
-        plt.subplot(2,2,1),plt.imshow(cloth_mask),plt.title('cloth_mask')
-        plt.subplot(2,2,2),plt.imshow(canvas),plt.title('remove_region')
-        plt.subplot(2,2,3),plt.imshow(align_mask),plt.title('align_mask')
-        plt.subplot(2,2,4),plt.imshow(misalign_mask),plt.title('misalign_mask')
-        plt.show()'''
+        else:
+            #conture 구하고 그 점들을 가지고 랜덤 크기의 점 그리기 그리고 그 점들을 빼기
+            cloth_mask = ((parse_final[2].numpy() > 0) *255).astype(np.uint8)
+            align_mask = cloth_mask.copy()
+            for _ in range(10):
+                contour, _ = cv2.findContours(align_mask, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
+                for i in contour:
+                    for j in i:
+                        if np.random.rand()<0.5:
+                            align_mask[j[0][1]][j[0][0]] = 0
+
+            misalign_mask = (((parse_final[2].numpy()>0)*1 - align_mask)>0)*1
+            misalign_mask = torch.tensor(misalign_mask[np.newaxis,:]).type(torch.float32)
+            warped_cloth = img * (align_mask > 0)
+
 
         #ground truth cloth mask affine(perspective?) transform->compare with original cloth mask -> mask misalign region in random
-        cloth_mask = ((parse_final[2].numpy() > 0) * 255).astype(np.uint8)
+        '''cloth_mask = ((parse_final[2].numpy() > 0) * 255).astype(np.uint8)
         warped_cloth = np.transpose(((img.numpy()+1)/2*255).astype(np.uint8),(1,2,0))
-
-
         scale = 0.025
         s_x, s_y, d_x, d_y, theta = (np.random.rand(5) - 0.5) * 2  # s_x,s_y,d_x,d_y,theta
         s_x = 1 + abs(scale) * s_x * -2
@@ -393,20 +393,10 @@ class inpaint_dataset(data.Dataset):
         warped_cloth = cv2.warpAffine(warped_cloth,M,(cloth_mask.shape[1], cloth_mask.shape[0]))
         warped_cloth[cloth_mask_affine == 0] = 128
         misalign_mask = cloth_mask - cloth_mask_affine
-
-
-        '''plt.subplot(1, 3, 1), plt.imshow(cloth_mask_affine), plt.title('cloth_mask_affine')
-        plt.subplot(1, 3, 2), plt.imshow(warped_cloth), plt.title('warped_cloth')
-        plt.subplot(1, 3, 3), plt.imshow(misalign_mask), plt.title('misalign_mask')
-        plt.show()'''
-
         misalign_mask = torch.tensor(misalign_mask[np.newaxis, :, :]/255*2-1).type(torch.float32)
         misalign_mask[misalign_mask<1.0]=0
-        warped_cloth = torch.tensor(np.transpose(warped_cloth,(2,0,1))/255*2-1).type(torch.float32)
-        parse_inpaint = torch.cat((parse_final,agnostic_mask), dim=0)
-        #plt.imshow(np.transpose(np.array(parse_inpaint[:3]),(1,2,0))),plt.show()
-        #plt.imshow(np.transpose(((np.array(img_agnostic)+1)/2*255).astype(np.uint8),(1,2,0))),plt.show()
-        #parse_div[2:3] -= misalign_mask
+        warped_cloth = torch.tensor(np.transpose(warped_cloth,(2,0,1))/255*2-1).type(torch.float32)'''
+        parse_inpaint = torch.cat((parse_final, agnostic_mask), dim=0)
 
         result = {
             'img_name': img_name,
@@ -429,6 +419,7 @@ class inpaint_dataset(data.Dataset):
 
 class inpaint_dataloader:
     def __init__(self, opt, dataset):
+
         super(inpaint_dataloader, self).__init__()
 
         if opt.shuffle:

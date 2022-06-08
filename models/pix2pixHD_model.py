@@ -18,6 +18,7 @@ class Pix2PixHDModel(BaseModel):
         return loss_filter
 
     def initialize(self, opt):
+
         BaseModel.initialize(self, opt)
         if opt.resize_or_crop != 'none' or not opt.isTrain: # when training at full res this causes OOM
             torch.backends.cudnn.benchmark = True

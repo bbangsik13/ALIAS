@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import functools
@@ -217,6 +218,7 @@ class ALIASNorm(nn.Module):
         beta = self.conv_beta(actv)
 
         # Apply the affine parameters.
+        #print(x.shape,normalized.shape,gamma.shape,beta.shape)
         output = normalized * (1 + gamma) + beta
         return output
 
@@ -246,7 +248,7 @@ class ALIASResBlock(nn.Module):
         semantic_nc = opt.semantic_nc
         if use_mask_norm:
             subnorm_type = 'aliasmask'
-            semantic_nc = semantic_nc + 1
+            #semantic_nc = semantic_nc + 1
         # print(f"subnorm_type:{subnorm_type},input_nc:{input_nc},semantic_nc:{semantic_nc}")
         semantic_nc = 7
         self.norm_0 = ALIASNorm(subnorm_type, input_nc, semantic_nc)
@@ -288,24 +290,63 @@ class ALIASGenerator(nn.Module):
 
         ngf = opt.ngf
 
-        self.conv_0 = nn.Conv2d(input_nc, ngf*2, kernel_size=3, padding=1)
+        '''self.conv_0 = nn.Conv2d(input_nc, ngf, kernel_size=3, padding=1)
         for i in range(1, 8):
-            self.add_module('conv_{}'.format(i), nn.Conv2d(input_nc, ngf, kernel_size=3, padding=1))
+            self.add_module('conv_{}'.format(i), nn.Conv2d(input_nc, ngf, kernel_size=3, padding=1))'''
 
-        self.head_0 = ALIASResBlock(opt, ngf*2, ngf)
+        self.slice_up4 = nn.Sequential(
+            nn.Conv2d(6, ngf//256, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+        self.slice_up3 = nn.Sequential(
+            nn.AvgPool2d(2),
+            nn.Conv2d(ngf // 256, ngf // 128, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+        self.slice_up2 = nn.Sequential(
+            nn.AvgPool2d(2),
+            nn.Conv2d(ngf // 128, ngf // 64, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+        self.slice_up1 = nn.Sequential(
+            nn.AvgPool2d(2),
+            nn.Conv2d(ngf // 64, ngf // 32, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+        self.slice_up0 = nn.Sequential(
+            nn.AvgPool2d(2),
+            nn.Conv2d(ngf // 32, ngf // 16, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+        self.slice_middle1 = nn.Sequential(
+            nn.AvgPool2d(2),
+            nn.Conv2d(ngf // 16, ngf // 8, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+        self.slice_middle0 = nn.Sequential(
+            nn.AvgPool2d(2),
+            nn.Conv2d(ngf//8, ngf // 4, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+        self.slice_head0 = nn.Sequential(
+            nn.AvgPool2d(2),
+            nn.Conv2d(ngf//4, ngf, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+        self.head_0 = ALIASResBlock(opt, ngf, ngf//4)
 
-        self.G_middle_0 = ALIASResBlock(opt, ngf*2, ngf)
-        self.G_middle_1 = ALIASResBlock(opt, ngf*2, ngf)
+        self.G_middle_0 = ALIASResBlock(opt, ngf//2, ngf//8)
+        self.G_middle_1 = ALIASResBlock(opt, ngf//4, ngf//16)
 
-        self.up_0 = ALIASResBlock(opt, ngf*2, ngf)
-        self.up_1 = ALIASResBlock(opt, ngf*2, ngf)
-        self.up_2 = ALIASResBlock(opt, ngf*2, ngf)
-        self.up_3 = ALIASResBlock(opt, ngf*2, ngf)
+        self.up_0 = ALIASResBlock(opt, ngf//8, ngf//32)
+        self.up_1 = ALIASResBlock(opt, ngf//16, ngf//64)
+        self.up_2 = ALIASResBlock(opt, ngf//32, ngf//128)
+        self.up_3 = ALIASResBlock(opt, ngf//64, ngf//256)
         if self.num_upsampling_layers == 'most':
-            self.up_4 = ALIASResBlock(opt, ngf*2, ngf)
+            self.up_4 = ALIASResBlock(opt, ngf//128, ngf//128)
 
 
-        self.conv_img = nn.Conv2d(ngf, 3, kernel_size=3, padding=1)
+        self.conv_img = nn.Conv2d(ngf//128, 3, kernel_size=3, padding=1)
 
         self.up = nn.Upsample(scale_factor=2, mode='nearest')
         self.relu = nn.LeakyReLU(0.2)
@@ -327,32 +368,48 @@ class ALIASGenerator(nn.Module):
 
     def forward(self, x, seg_div, misalign_mask):
         # print(x.shape)
+        img_agnostic = x.clone().detach()[:,0:3,:,:]
+        warped_cloth = x.clone().detach()[:,3:6,:,:]
         # @TODO: use seg_div in low resolution and use seg in high resolution?
-        samples = [F.interpolate(x, size=(self.sh * 2 ** i, self.sw * 2 ** i), mode='nearest') for i in range(8)]
-        features = [self._modules['conv_{}'.format(i)](samples[i]) for i in range(8)]
+        #samples = [F.interpolate(x, size=(self.sh * 2 ** i, self.sw * 2 ** i), mode='nearest') for i in range(8)]
+        #features = [self._modules['conv_{}'.format(i)](samples[i]) for i in range(8)]
+        feature7 = self.slice_up4(x)
+        feature6 = self.slice_up3(feature7)
+        feature5 = self.slice_up2(feature6)
+        feature4 = self.slice_up1(feature5)
+        feature3 = self.slice_up0(feature4)
+        feature2 = self.slice_middle1(feature3)
+        feature1 = self.slice_middle0(feature2)
+        feature0 = self.slice_head0(feature1)
 
-        x = self.head_0(features[0], seg_div, misalign_mask)
+        x = self.head_0(feature0, seg_div, misalign_mask)
 
         x = self.up(x)
-        x = self.G_middle_0(torch.cat((x, features[1]), 1), seg_div, misalign_mask)
+        x = self.G_middle_0(torch.cat((x, feature1), 1), seg_div, misalign_mask)
         if self.num_upsampling_layers in ['more', 'most']:
             x = self.up(x)
-        x = self.G_middle_1(torch.cat((x, features[2]), 1), seg_div, misalign_mask)
+        x = self.G_middle_1(torch.cat((x, feature2), 1), seg_div, misalign_mask)
 
         x = self.up(x)
-        x = self.up_0(torch.cat((x, features[3]), 1), seg_div, misalign_mask)
+        x = self.up_0(torch.cat((x, feature3), 1), seg_div, misalign_mask)
         x = self.up(x)
-        x = self.up_1(torch.cat((x, features[4]), 1), seg_div, misalign_mask)
+        x = self.up_1(torch.cat((x, feature4), 1), seg_div, misalign_mask)
         x = self.up(x)
-        x = self.up_2(torch.cat((x, features[5]), 1), seg_div, misalign_mask)
+        x = self.up_2(torch.cat((x, feature5), 1), seg_div, misalign_mask)
         x = self.up(x)
-        x = self.up_3(torch.cat((x, features[6]), 1), seg_div, misalign_mask)
+        x = self.up_3(torch.cat((x, feature6), 1), seg_div, misalign_mask)
         if self.num_upsampling_layers == 'most':
             x = self.up(x)
-            x = self.up_4(torch.cat((x, features[7]), 1), seg_div, misalign_mask)
+            x = self.up_4(torch.cat((x, feature7), 1), seg_div, misalign_mask)
 
         x = self.conv_img(self.relu(x))
-        return self.tanh(x)
+        x = self.tanh(x)
+        agnostic_mask = seg_div[:,3,:,:]#<1.0)#.repeat(1,3,1,1)
+        align_mask = seg_div[:,2:3,:,:] - misalign_mask
+        #plt.imshow(np.squeeze(agnostic_mask.detach().cpu().numpy())),plt.show()
+        x = (1 - agnostic_mask) * img_agnostic + agnostic_mask * x
+        #x = (1 - align_mask) * x + align_mask * warped_cloth
+        return x
 
 
 ##################################

@@ -44,7 +44,7 @@ class BaseOptions():
 
         # for generator
         self.parser.add_argument('--netG', type=str, default='global', help='selects model to use for netG')
-        self.parser.add_argument('--ngf', type=int, default=32, help='# of gen filters in first conv layer')
+        self.parser.add_argument('--ngf', type=int, default=1024, help='# of gen filters in first conv layer')
         self.parser.add_argument('--n_downsample_global', type=int, default=4, help='number of downsampling layers in netG') 
         self.parser.add_argument('--n_blocks_global', type=int, default=9, help='number of residual blocks in the global generator network')
         self.parser.add_argument('--n_blocks_local', type=int, default=3, help='number of residual blocks in the local enhancer network')
@@ -59,7 +59,9 @@ class BaseOptions():
         self.parser.add_argument('--n_downsample_E', type=int, default=4, help='# of downsampling layers in encoder') 
         self.parser.add_argument('--nef', type=int, default=16, help='# of encoder filters in the first conv layer')        
         self.parser.add_argument('--n_clusters', type=int, default=10, help='number of clusters for features')        
-        self.parser.add_argument('--use_warped', action='store_true', help='if specified, load precomputed feature maps')
+        self.parser.add_argument('--use_previous_network_output', action='store_true', help='if specified, load precomputed feature maps')
+        self.parser.add_argument('--use_warped_cloth', action='store_true', help='if specified, load precomputed feature maps')
+        self.parser.add_argument('--warped_cloth_dir', type=str, default='dataset')
 
 
 

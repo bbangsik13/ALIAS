@@ -1,6 +1,6 @@
 
 def CreateDataLoader(opt):
-    if opt.use_warped:
+    if opt.use_previous_network_output:
         from data.custom_dataset_data_loader import CustomDatasetDataLoader
         data_loader = CustomDatasetDataLoader()
         data_loader.initialize(opt)

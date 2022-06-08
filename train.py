@@ -38,7 +38,7 @@ if opt.debug:
 # 2. dataset and loader 
 data_loader = CreateDataLoader(opt)
 
-if opt.use_warped:
+if opt.use_previous_network_output:
     dataset = data_loader.load_data()
 else:
     dataset = data_loader.data_loader
