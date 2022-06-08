@@ -82,7 +82,7 @@ class inpaint_dataset(data.Dataset):
                 c_names.append(c_name)
 
         self.img_names = img_names
-        self.c_name =c_names[0]
+        self.c_names =c_names
         self.labels = {  ##  compressing CHIP PGN to VITON's ##########
             0: ['background', [0]],
             1: ['hair', [1, 2]],
@@ -277,6 +277,7 @@ class inpaint_dataset(data.Dataset):
         ''' indexing operation: called batch_size for each iteration '''
 
         img_name = self.img_names[index]
+        c_name = self.c_names[index]
 
         # load pose image
         pose_name = img_name.replace('.jpg', '_rendered.png')
@@ -354,7 +355,7 @@ class inpaint_dataset(data.Dataset):
         agnostic_mask = torch.tensor(agnostic_mask[np.newaxis, :, :]).type(torch.float32)
 
         if self.opt.use_warped_cloth:
-            warped_name = img_name.split('.')[0]+"_"+ self.c_name.split('.')[0]+".npy"
+            warped_name = img_name.split('.')[0]+"_"+ c_name.split('.')[0]+".npy"
             warped_cloth = torch.tensor(np.load(osp.join(self.opt.warped_cloth_dir,'warped_c',warped_name))[0,:,:,:]).type(torch.float32)
             misalign_mask = torch.tensor(np.load(osp.join(self.opt.warped_cloth_dir,'misalign_mask',warped_name))[0,:,:,:]).type(torch.float32)
 
