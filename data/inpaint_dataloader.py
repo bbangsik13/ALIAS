@@ -445,8 +445,7 @@ class inpaint_dataloader:
         return batch
 
     def name(self):
-        print("inpaint dataset")
-        return 0
+        return "inpaint dataset"
 
     def __len__(self):
         return len(self.dataset)
