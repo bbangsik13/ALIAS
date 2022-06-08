@@ -4,7 +4,7 @@ from os import path as osp
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image, ImageDraw
-import cv2
+import os
 import torch
 from torch.utils import data
 from torchvision import transforms
@@ -73,16 +73,27 @@ class inpaint_dataset(data.Dataset):
         # 2. load data list
         img_names = []  # models
         c_names = []  # cloths
+        if self.opt.use_warped_cloth:
+            warped_cloth_names= []
+
         with open(osp.join(opt.dataroot,opt.dataset_mode, opt.dataset_list), 'r') as f:
             for line in f.readlines():
                 img_name, c_name = line.strip().split()
-                img_names.append(img_name)
+
                 if self.dataset_etri:  # etri datset use F & B
                     c_name = c_name.replace('.jpg', '_F.jpg')
+                if self.opt.use_warped_cloth:
+                    warped_name = img_name.split('.')[0] + "_" + c_name.split('.')[0] + ".npy"
+                    if os.path.isfile(osp.join(self.opt.warped_cloth_dir,'warped_c',warped_name)):
+                        warped_cloth_names.append(warped_name)
+                    else:
+                        continue
+                img_names.append(img_name)
                 c_names.append(c_name)
-
         self.img_names = img_names
         self.c_names =c_names
+        if self.opt.use_warped_cloth:
+            self.warped_cloth_names = warped_cloth_names
         self.labels = {  ##  compressing CHIP PGN to VITON's ##########
             0: ['background', [0]],
             1: ['hair', [1, 2]],
@@ -277,7 +288,7 @@ class inpaint_dataset(data.Dataset):
         ''' indexing operation: called batch_size for each iteration '''
 
         img_name = self.img_names[index]
-        c_name = self.c_names[index]
+        warped_name = self.warped_cloth_names[index]
 
         # load pose image
         pose_name = img_name.replace('.jpg', '_rendered.png')
@@ -355,7 +366,7 @@ class inpaint_dataset(data.Dataset):
         agnostic_mask = torch.tensor(agnostic_mask[np.newaxis, :, :]).type(torch.float32)
 
         if self.opt.use_warped_cloth:
-            warped_name = img_name.split('.')[0]+"_"+ c_name.split('.')[0]+".npy"
+
             warped_cloth = torch.tensor(np.load(osp.join(self.opt.warped_cloth_dir,'warped_c',warped_name))[0,:,:,:]).type(torch.float32)
             misalign_mask = torch.tensor(np.load(osp.join(self.opt.warped_cloth_dir,'misalign_mask',warped_name))[0,:,:,:]).type(torch.float32)
 
@@ -430,7 +441,7 @@ class inpaint_dataloader:
 
         self.data_loader = data.DataLoader(
             dataset, batch_size=opt.batchSize, shuffle=(train_sampler is None),
-            num_workers=opt.workers, pin_memory=True, drop_last=True, sampler=train_sampler
+            num_workers=opt.nThreads, pin_memory=True, drop_last=True, sampler=train_sampler
         )
         self.dataset = dataset
         self.data_iter = self.data_loader.__iter__()
