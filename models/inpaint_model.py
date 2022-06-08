@@ -40,7 +40,7 @@ class inpaint_model(BaseModel):
         # Discriminator network
         if self.isTrain:
             use_sigmoid = opt.no_lsgan
-            netD_input_nc = 9+7
+            netD_input_nc = 3+4+3#9+7
             self.netD = inpaint_network.define_D(netD_input_nc, opt.ndf, opt.n_layers_D, opt.norm, use_sigmoid,
                                           opt.num_D, not opt.no_ganFeat_loss, gpu_ids=self.gpu_ids,opt=opt)
 
@@ -95,15 +95,15 @@ class inpaint_model(BaseModel):
 
         fake_image = self.netG.forward(torch.cat((img_agnostic,  warped_c), dim=1), torch.cat((parse_div,pose),dim=1), misalign_mask)
         # Fake Detection and Loss
-        pred_fake_pool = self.discriminate(torch.cat((img_agnostic, warped_c,parse_div,pose), dim=1), fake_image, use_pool=True)#discriminator는 좀 더 어려운걸 학습해야
+        pred_fake_pool = self.discriminate(torch.cat((img_agnostic,parse_div), dim=1), fake_image, use_pool=True)#discriminator는 좀 더 어려운걸 학습해야
         loss_D_fake = self.criterionGAN(pred_fake_pool, False)
 
         # Real Detection and Loss
-        pred_real = self.discriminate(torch.cat((img_agnostic, warped_c,parse_div,pose), dim=1), ground_truth_image)
+        pred_real = self.discriminate(torch.cat((img_agnostic,parse_div), dim=1), ground_truth_image)
         loss_D_real = self.criterionGAN(pred_real, True)
 
         # GAN loss (Fake Passability Loss)
-        pred_fake = self.netD.forward(torch.cat((torch.cat((img_agnostic, warped_c,parse_div,pose), dim=1), fake_image), dim=1))
+        pred_fake = self.netD.forward(torch.cat((torch.cat((img_agnostic,parse_div), dim=1), fake_image), dim=1))
 
         loss_G_GAN = self.criterionGAN(pred_fake, True) #* 0.1
         # GAN feature matching loss
