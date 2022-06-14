@@ -119,7 +119,8 @@ class Pix2PixHDModel(BaseModel):
         # VGG feature matching loss
         loss_G_VGG = 0
         if not self.opt.no_vgg_loss:
-            loss_G_VGG = self.criterionVGG(fake_image, ground_truth_image) * self.opt.lambda_feat
+            loss_G_VGG,vgg_loss_map_list = self.criterionVGG(fake_image, ground_truth_image)
+            loss_G_VGG *= self.opt.lambda_feat
 
         # heejune added L1 for testing
         loss_G_L1 = 0
@@ -134,7 +135,7 @@ class Pix2PixHDModel(BaseModel):
             M_generate = agnostic_mask - M_align
             L1_real_image[M_generate>0.0] = L1_fake_image[M_generate>0.0]
             loss_G_L1 = L1_loss(L1_fake_image , L1_real_image) * 4 * self.opt.lambda_feat
-        return [ self.loss_filter( loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake, loss_G_L1 ), fake_image ]
+        return [ self.loss_filter( loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake, loss_G_L1 ), fake_image ] ,vgg_loss_map_list
 
     def inference(self,img_agnostic,pose, warped_c, parse, parse_div,misalign_mask,agnostic_mask):
 

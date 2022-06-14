@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import functools
@@ -105,14 +106,24 @@ class VGGLoss(nn.Module):
         super(VGGLoss, self).__init__()        
         self.vgg = Vgg19().cuda()
         self.criterion = nn.L1Loss()
-        self.weights = [1.0/32, 1.0/16, 1.0/8, 1.0/4, 1.0]        
-
+        self.weights = [1.0/32, 1.0/16, 1.0/8, 1.0/4, 1.0]
     def forward(self, x, y):              
         x_vgg, y_vgg = self.vgg(x), self.vgg(y)
+
         loss = 0
+        loss_map_list = []
         for i in range(len(x_vgg)):
-            loss += self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())        
-        return loss
+            split_list = []
+            loss += self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())
+            if True:
+                for batch in range(x_vgg[i].shape[0]):
+                    diff = torch.abs(x_vgg[i][batch:batch+1,:,:,:].cpu().detach() - y_vgg[i][batch:batch+1,:,:,:].cpu().detach())
+                    diff_up = F.interpolate(diff,scale_factor=2.0**i, mode='bilinear')
+                    loss_map = diff_up.sum(1)
+                    loss_map = loss_map.detach().cpu().numpy()
+                    split_list.append(np.squeeze(loss_map))
+                loss_map_list.append(split_list)
+        return loss , loss_map_list
 
 from torch.nn.utils.spectral_norm import spectral_norm
 from torch import nn

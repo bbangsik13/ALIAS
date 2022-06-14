@@ -1,5 +1,7 @@
 import time
 import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torch.autograd import Variable
@@ -102,6 +104,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
             Sdiv = Variable(data['parse_div'])
             Mdiv = Variable(data['misalign_mask'])
             Igt = Variable(data['ground_truth_image'])
+
             losses, generated = model(Ia, P, Wc, Sdiv, Mdiv, Igt, infer=save_fake)
         else:
             if once: # checking input
@@ -124,10 +127,12 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
             Sdiv = Variable(data['parse_div'])
             Mdiv = Variable(data['misalign_mask'])
             Igt  = Variable(data['ground_truth_image'])
+            paths = data['path']
 
-            losses, generated = model(Ia, P, Wc, S, Sdiv, Mdiv,Ma ,Igt, infer=save_fake)
+            (losses, generated),vgg_loss_map_list = model(Ia, P, Wc, S, Sdiv, Mdiv,Ma ,Igt, infer=save_fake)
         #print(torch.unique(generated))
         # sum per device losses
+
         losses = [torch.mean(x) if not isinstance(x, int) else x for x in losses]
         loss_dict = dict(zip(model.module.loss_names, losses))
         # calculate final loss scalar
@@ -152,9 +157,10 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
         visualizer.print_current_errors(epoch, epoch_iter, errors, eta)'''
         ############## Display results and errors ##########
         ### print out errors
-        if total_steps % opt.print_freq == print_delta:
+
+        if True:#total_steps % opt.print_freq == print_delta:
             errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
-            eta = (time.time() - epoch_start_time)* (len(dataset)/opt.batchSize - i)/(i - save_epoch_iter +1) 
+            eta = (time.time() - epoch_start_time)* (len(dataset)/opt.batchSize - i)/(i - save_epoch_iter +1)
             visualizer.print_current_errors(epoch, epoch_iter, errors, eta)
             visualizer.plot_current_errors(errors, total_steps)
             #call(["nvidia-smi", "--format=csv", "--query-gpu=memory.used,memory.free"])
@@ -202,9 +208,32 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                 visuals = OrderedDict([('input_label', util.tensor2label(data['label'][0], opt.label_nc)),
                                    ('synthesized_image', util.tensor2im(generated.data[0])),
                                    ('real_image', util.tensor2im(data['image'][0]))])
+                                   
+                Ia = Variable(data['img_agnostic'])
+                P  = Variable(data['pose'])
+                Wc = Variable(data['warped_c'])
+                Ma = Variable(data['agnostic_mask'])
+                S =  Variable(data['parse'])
+                Sdiv = Variable(data['parse_div'])
+                Mdiv = Variable(data['misalign_mask'])
+                Igt  = Variable(data['ground_truth_image'])
                 '''
                 if True:
-                    visualizer.save_current_results(visuals, epoch, total_steps)
+                    #visualizer.save_current_results(visuals, epoch, total_steps)
+                    for b in range(len(paths)):
+                        name = paths[b].split('/')[-1].split('.')[0]
+                        img_dir = os.path.join(opt.checkpoints_dir,opt.name,'web', 'images','epoch%.3d_%s_%s.jpg' % (epoch, 'vgg_loss_map', name))
+                        plt.figure(figsize=(12, 8))
+                        for i in range(5):
+                            plt.subplot(2, 4, i + 1), plt.imshow(vgg_loss_map_list[i][b]), plt.title(
+                                f"{i}th feature")
+                        fake_img = np.transpose(((generated.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
+                        true_img = np.transpose(((Igt.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
+                        plt.subplot(2,4,7),plt.imshow(fake_img),plt.title('fake')
+                        plt.subplot(2,4,8),plt.imshow(true_img),plt.title('true')
+                        plt.savefig(img_dir)
+
+
                 if False:
                     visualizer.display_current_results(visuals, epoch, total_steps)
 
