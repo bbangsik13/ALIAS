@@ -129,7 +129,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
             Igt  = Variable(data['ground_truth_image'])
             paths = data['path']
 
-            (losses, generated),vgg_loss_map_list = model(Ia, P, Wc, S, Sdiv, Mdiv,Ma ,Igt, infer=save_fake)
+            (losses, generated),vgg_loss_map_list,Feat_map_list = model(Ia, P, Wc, S, Sdiv, Mdiv,Ma ,Igt, infer=save_fake)
         #print(torch.unique(generated))
         # sum per device losses
 
@@ -158,7 +158,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
         ############## Display results and errors ##########
         ### print out errors
 
-        if True:#total_steps % opt.print_freq == print_delta:
+        if total_steps % opt.print_freq == print_delta:
             errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
             eta = (time.time() - epoch_start_time)* (len(dataset)/opt.batchSize - i)/(i - save_epoch_iter +1)
             visualizer.print_current_errors(epoch, epoch_iter, errors, eta)
@@ -232,6 +232,17 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                         plt.subplot(2,4,7),plt.imshow(fake_img),plt.title('fake')
                         plt.subplot(2,4,8),plt.imshow(true_img),plt.title('true')
                         plt.savefig(img_dir)
+
+                        img_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web', 'images',
+                                               'epoch%.3d_%s_%s.jpg' % (epoch, 'Feat_loss_map', name))
+                        for i in range(len(Feat_map_list)):
+                            for j in range(len(Feat_map_list[i])):
+                                plt.subplot(2,5,5*i+j+1), plt.imshow(Feat_map_list[i][j]),plt.title(f"{i}th D, {j}th feature")
+                        plt.subplot(2,5,5),plt.imshow(fake_img),plt.title('fake')
+                        plt.subplot(2, 5, 10), plt.imshow(true_img), plt.title('true')
+                        plt.savefig(img_dir)
+
+
 
 
                 if False:

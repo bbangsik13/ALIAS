@@ -108,13 +108,22 @@ class Pix2PixHDModel(BaseModel):
         loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.1               
         # GAN feature matching loss
         loss_G_GAN_Feat = 0
+        Feat_map_list = []
         if not self.opt.no_ganFeat_loss:
             feat_weights = 1.0 / (self.opt.n_layers_D + 1)
             D_weights = 1.0 / self.opt.num_D
             for i in range(self.opt.num_D):
+                D_feature_list = []
                 for j in range(len(pred_fake[i])-1):
                     loss_G_GAN_Feat += D_weights * feat_weights * \
                         self.criterionFeat(pred_fake[i][j], pred_real[i][j].detach()) * self.opt.lambda_feat
+                    diff = torch.abs(pred_fake[i][j].cpu().detach() - pred_real[i][j].cpu().detach())
+                    diff_up = torch.nn.functional.interpolate(diff, scale_factor=2.0 ** j, mode='bilinear')
+                    loss_map = diff_up.sum(1)
+                    loss_map = loss_map.detach().cpu().numpy()
+                    D_feature_list.append(np.squeeze(loss_map))
+
+                Feat_map_list.append(D_feature_list)
                    
         # VGG feature matching loss
         loss_G_VGG = 0
@@ -135,7 +144,7 @@ class Pix2PixHDModel(BaseModel):
             M_generate = agnostic_mask - M_align
             L1_real_image[M_generate>0.0] = L1_fake_image[M_generate>0.0]
             loss_G_L1 = L1_loss(L1_fake_image , L1_real_image) * 4 * self.opt.lambda_feat
-        return [ self.loss_filter( loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake, loss_G_L1 ), fake_image ] ,vgg_loss_map_list
+        return [ self.loss_filter( loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake, loss_G_L1 ), fake_image ] ,vgg_loss_map_list,Feat_map_list
 
     def inference(self,img_agnostic,pose, warped_c, parse, parse_div,misalign_mask,agnostic_mask):
 
