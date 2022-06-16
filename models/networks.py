@@ -117,11 +117,11 @@ class VGGLoss(nn.Module):
             loss += self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())
             if True:
                 for batch in range(x_vgg[i].shape[0]):
-                    diff = torch.abs(x_vgg[i][batch:batch+1,:,:,:].cpu().detach() - y_vgg[i][batch:batch+1,:,:,:].cpu().detach())
+                    diff = torch.abs(x_vgg[i][batch:batch+1,:,:,:].detach() - y_vgg[i][batch:batch+1,:,:,:].detach()) * self.weights[i] * 10
                     diff_up = F.interpolate(diff,scale_factor=2.0**i, mode='bilinear')
-                    loss_map = diff_up.sum(1)
-                    loss_map = loss_map.detach().cpu().numpy()
-                    split_list.append(np.squeeze(loss_map))
+                    loss_map = diff_up.mean(1)
+                    loss_map = loss_map.detach()
+                    split_list.append(loss_map)
                 loss_map_list.append(split_list)
         return loss , loss_map_list
 

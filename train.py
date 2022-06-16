@@ -158,7 +158,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
         ############## Display results and errors ##########
         ### print out errors
 
-        if total_steps % opt.print_freq == print_delta:
+        if True:# total_steps % opt.print_freq == print_delta:
             errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
             eta = (time.time() - epoch_start_time)* (len(dataset)/opt.batchSize - i)/(i - save_epoch_iter +1)
             visualizer.print_current_errors(epoch, epoch_iter, errors, eta)
@@ -223,24 +223,34 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                     for b in range(len(paths)):
                         name = paths[b].split('/')[-1].split('.')[0]
                         img_dir = os.path.join(opt.checkpoints_dir,opt.name,'web', 'images','epoch%.3d_step%.5d_%s_%s.jpg' % (epoch,total_steps, 'vgg_loss_map', name))
-                        plt.figure(figsize=(12, 8))
+                        plt.figure(figsize=(16, 8))
                         for i in range(5):
-                            plt.subplot(2, 4, i + 1), plt.imshow(vgg_loss_map_list[i][b],vmin=0,vmax=1024), plt.title(
-                                    f"{i}th feature\nmax:{np.round_(np.max(vgg_loss_map_list[i][b]),2)}")
+                            loss_map = np.squeeze(vgg_loss_map_list[i][b].cpu().numpy())
+                            plt.subplot(2, 4, i + 1), plt.imshow(loss_map), \
+                            plt.title(
+                                    f"%dth feature\navr:%.5f"%(i,np.average(loss_map))),
+                            plt.colorbar(),
+                            plt.axis('off')
                         fake_img = np.transpose(((generated.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
                         true_img = np.transpose(((Igt.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
-                        plt.subplot(2,4,7),plt.imshow(fake_img),plt.title('fake')
-                        plt.subplot(2,4,8),plt.imshow(true_img),plt.title('true')
+                        plt.subplot(2,4,7),plt.imshow(fake_img),plt.title('fake'),plt.axis('off')
+                        plt.subplot(2,4,8),plt.imshow(true_img),plt.title('true'),plt.axis('off')
                         plt.savefig(img_dir)
+                        plt.clf()
 
                         img_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web', 'images',
                                                'epoch%.3d_step%.5d_%s_%s.jpg' % (epoch,total_steps, 'Feat_loss_map', name))
                         for i in range(len(Feat_map_list)):
                             for j in range(len(Feat_map_list[i])):
-                                plt.subplot(2,5,5*i+j+1), plt.imshow(Feat_map_list[i][j],vmin=0,vmax=1024),plt.title(f"{i}th D, {j}th feature\nmax:{np.round_(np.max(Feat_map_list[i][j]),2)}")
-                        plt.subplot(2,5,5),plt.imshow(fake_img),plt.title('fake')
-                        plt.subplot(2, 5, 10), plt.imshow(true_img), plt.title('true')
+                                loss_map = np.squeeze(Feat_map_list[i][j].cpu().numpy())
+                                plt.subplot(2,5,5*i+j+1), plt.imshow(loss_map),\
+                                plt.title(f"%dth D, %dth feature\navr:%.5f"%(i,j,np.average(loss_map))),
+                                plt.colorbar(),
+                                plt.axis('off')
+                        plt.subplot(2,5,5),plt.imshow(fake_img),plt.title('fake'),plt.axis('off')
+                        plt.subplot(2, 5, 10), plt.imshow(true_img), plt.title('true'),plt.axis('off')
                         plt.savefig(img_dir)
+                        plt.clf()
 
 
 
