@@ -115,14 +115,11 @@ class VGGLoss(nn.Module):
         for i in range(len(x_vgg)):
             split_list = []
             loss += self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())
-            if True:
-                for batch in range(x_vgg[i].shape[0]):
-                    diff = torch.abs(x_vgg[i][batch:batch+1,:,:,:].detach() - y_vgg[i][batch:batch+1,:,:,:].detach()) * self.weights[i] * 10
-                    diff_up = F.interpolate(diff,scale_factor=2.0**i, mode='bilinear')
-                    loss_map = diff_up.mean(1)
-                    loss_map = loss_map.detach()
-                    split_list.append(loss_map)
-                loss_map_list.append(split_list)
+
+            diff = torch.abs(x_vgg[i].detach() - y_vgg[i].detach()).mean(1) * self.weights[i] * 10
+
+            split_list.append(diff)
+            loss_map_list.append(split_list)
         return loss , loss_map_list
 
 from torch.nn.utils.spectral_norm import spectral_norm

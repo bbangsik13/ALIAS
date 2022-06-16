@@ -119,11 +119,8 @@ class Pix2PixHDModel(BaseModel):
                 for j in range(len(pred_fake[i])-1):
                     loss_G_GAN_Feat += D_weights * feat_weights * \
                         self.criterionFeat(pred_fake[i][j], pred_real[i][j].detach()) * self.opt.lambda_feat
-                    diff = torch.abs(pred_fake[i][j].detach() - pred_real[i][j].detach()) * D_weights * feat_weights * 10
-                    diff_up = torch.nn.functional.interpolate(diff, scale_factor=2.0 ** j, mode='bilinear')
-                    loss_map = diff_up.mean(1)
-                    loss_map = loss_map.detach()
-                    D_feature_list.append(loss_map)
+                    diff = torch.abs(pred_fake[i][j].detach() - pred_real[i][j].detach()).mean(1) * D_weights * feat_weights * 10
+                    D_feature_list.append(diff)
 
                 Feat_map_list.append(D_feature_list)
                    
