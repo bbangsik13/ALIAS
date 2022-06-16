@@ -235,6 +235,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                         true_img = np.transpose(((Igt.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
                         plt.subplot(2,4,7),plt.imshow(fake_img),plt.title('fake'),plt.axis('off')
                         plt.subplot(2,4,8),plt.imshow(true_img),plt.title('true'),plt.axis('off')
+                        plt.suptitle("G_VGG:%.2f"%(errors['G_VGG']))
                         plt.savefig(img_dir)
                         plt.clf()
 
@@ -249,6 +250,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                                 plt.axis('off')
                         plt.subplot(2,5,5),plt.imshow(fake_img),plt.title('fake'),plt.axis('off')
                         plt.subplot(2, 5, 10), plt.imshow(true_img), plt.title('true'),plt.axis('off')
+                        plt.suptitle("G_GAN_Feat:%.2f" % (errors['G_GAN_Feat']))
                         plt.savefig(img_dir)
                         plt.clf()
 
