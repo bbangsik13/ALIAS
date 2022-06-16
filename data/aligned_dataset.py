@@ -129,6 +129,8 @@ class AlignedDataset(BaseDataset):
         transform_synthesis_image = normalize_transform()
         ground_truth_image_tensor = transform_synthesis_image(ground_truth_image.convert('RGB'))
 
+        img_agnostic_tensor = (1-agnostic_mask_tensor) * img_agnostic_tensor
+
         if self.opt.swap_warped_cloth:
             cloth_mask = (parse_tensor[2:3,:,:]>0).repeat(3,1,1)
             #plt.subplot(1, 2, 1), plt.imshow(

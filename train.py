@@ -9,7 +9,7 @@ from collections import OrderedDict
 from subprocess import call
 import fractions
 def lcm(a,b): return abs(a * b)/fractions.gcd(a,b) if a and b else 0
-
+from PIL import Image
 from options.train_options import TrainOptions
 from data.data_loader import CreateDataLoader
 from models.models import create_model
@@ -158,7 +158,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
         ############## Display results and errors ##########
         ### print out errors
 
-        if total_steps % opt.print_freq == print_delta:
+        if True:#total_steps % opt.print_freq == print_delta:
             errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
             eta = (time.time() - epoch_start_time)* (len(dataset)/opt.batchSize - i)/(i - save_epoch_iter +1)
             visualizer.print_current_errors(epoch, epoch_iter, errors, eta)
@@ -252,6 +252,40 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                         plt.savefig(img_dir)
                         plt.clf()
 
+                        '''
+                        OrderedDict([('gen{:05d}'.format(data_index), util.tensor2im(generated.data[0])),
+                                       ('Ia{:05d}'.format(data_index), util.tensor2im(data['img_agnostic'][0])),
+                                       ('warpedC{:05d}'.format(data_index), util.tensor2im(data['warped_c'][0])),
+                                       ('S{:05d}'.format(data_index), util.tensor2label(data['parse'][0], 7)),
+                                       ('pose{:05d}'.format(data_index), util.tensor2im(data['pose'][0])),
+                                       ('Sdiv{:05d}'.format(data_index), util.tensor2label(data['parse_div'][0], 8)),
+                                       ('Mdiv{:05d}'.format(data_index), util.tensor2im(data['misalign_mask'][0])),
+                                       ('gt{:05d}'.format(data_index), util.tensor2im(data['ground_truth_image'][0])),
+                        '''
+                        img_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web', 'images',
+                                               'epoch%.3d_step%.5d_%s_%s.jpg' % (
+                                               epoch, total_steps, 'inout', name))
+                        parse = util.tensor2label(data['parse'][0], 7)
+                        warped_c = util.tensor2im(data['warped_c'][0])
+                        pose = util.tensor2im(data['pose'][0])
+                        parse_div = util.tensor2label(data['parse_div'][0], 8)
+                        mask_div = util.tensor2im(data['misalign_mask'][0])
+                        img_agnostic = util.tensor2im(data['img_agnostic'][0])
+                        plt.subplot(2,4,1),plt.imshow(fake_img),plt.title('fake img'),plt.axis('off')
+                        plt.subplot(2,4,2),plt.imshow(true_img),plt.title('true img'),plt.axis('off')
+                        plt.subplot(2,4,3),plt.imshow(img_agnostic),plt.title('img agnostic'),plt.axis('off')
+                        plt.subplot(2,4,4),plt.imshow(warped_c),plt.title('warped cloth'),plt.axis('off')
+                        plt.subplot(2,4,5),plt.imshow(parse),plt.title('parse'),plt.axis('off')
+                        plt.subplot(2,4,6),plt.imshow(parse_div),plt.title('parse_div'),plt.axis('off')
+                        plt.subplot(2,4,7),plt.imshow(mask_div),plt.title('misalign mask'),plt.axis('off')
+                        plt.subplot(2,4,8),plt.imshow(pose),plt.title('openpose'),plt.axis('off')
+                        loss_log = ""
+                        for key in errors:
+                            loss_log += "%s:%.2f  " %(key,errors[key])
+                        plt.suptitle(loss_log)
+                        plt.savefig(img_dir)
+                        plt.clf()
+
 
 
 
@@ -282,5 +316,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
     if epoch > opt.niter + opt.niter_stable:
         model.module.update_learning_rate()
     #call(["nvidia-smi", "--format=csv", "--query-gpu=memory.used,memory.free"])
+
+
 
 
