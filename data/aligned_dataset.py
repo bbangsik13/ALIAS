@@ -96,7 +96,7 @@ class AlignedDataset(BaseDataset):
         #print("type of warped_cm", warped_cm.dtype)
         if False:
             warped_cm  = cv2.erode(warped_cm, np.ones((7,7))) 
-        agnostic_mask_tensor = torch.from_numpy(agnostic_mask)
+        agnostic_mask_tensor = torch.from_numpy(agnostic_mask).type(torch.float32)
         
         ## parse
         parse_path = self.parse_paths[index]

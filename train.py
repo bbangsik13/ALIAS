@@ -222,11 +222,11 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                     #visualizer.save_current_results(visuals, epoch, total_steps)
                     for b in range(len(paths)):
                         name = paths[b].split('/')[-1].split('.')[0]
-                        img_dir = os.path.join(opt.checkpoints_dir,opt.name,'web', 'images','epoch%.3d_%s_%s.jpg' % (epoch, 'vgg_loss_map', name))
+                        img_dir = os.path.join(opt.checkpoints_dir,opt.name,'web', 'images','epoch%.3d_step%.5d_%s_%s.jpg' % (epoch,total_steps, 'vgg_loss_map', name))
                         plt.figure(figsize=(12, 8))
                         for i in range(5):
-                            plt.subplot(2, 4, i + 1), plt.imshow(vgg_loss_map_list[i][b]), plt.title(
-                                f"{i}th feature")
+                            plt.subplot(2, 4, i + 1), plt.imshow(vgg_loss_map_list[i][b],vmin=0,vmax=1024), plt.title(
+                                    f"{i}th feature\nmax:{np.round_(np.max(vgg_loss_map_list[i][b]),2)}")
                         fake_img = np.transpose(((generated.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
                         true_img = np.transpose(((Igt.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
                         plt.subplot(2,4,7),plt.imshow(fake_img),plt.title('fake')
@@ -234,10 +234,10 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                         plt.savefig(img_dir)
 
                         img_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web', 'images',
-                                               'epoch%.3d_%s_%s.jpg' % (epoch, 'Feat_loss_map', name))
+                                               'epoch%.3d_step%.5d_%s_%s.jpg' % (epoch,total_steps, 'Feat_loss_map', name))
                         for i in range(len(Feat_map_list)):
                             for j in range(len(Feat_map_list[i])):
-                                plt.subplot(2,5,5*i+j+1), plt.imshow(Feat_map_list[i][j]),plt.title(f"{i}th D, {j}th feature")
+                                plt.subplot(2,5,5*i+j+1), plt.imshow(Feat_map_list[i][j],vmin=0,vmax=1024),plt.title(f"{i}th D, {j}th feature\nmax:{np.round_(np.max(Feat_map_list[i][j]),2)}")
                         plt.subplot(2,5,5),plt.imshow(fake_img),plt.title('fake')
                         plt.subplot(2, 5, 10), plt.imshow(true_img), plt.title('true')
                         plt.savefig(img_dir)

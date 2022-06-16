@@ -76,7 +76,7 @@ def filter():
             num_imgs =  len(img_list)
             print("num of images:", len(img_list))
             cur_id = 0
-
+        img_list = sorted(img_list)
         filename = img_list[cur_id] 
         return render_template('image_viewer.html', imagefile=filename, id=cur_id + 1, total_num = num_imgs)
     except:
@@ -97,6 +97,7 @@ if __name__ == "__main__":
     for img_path in img_list_f:
         _, img_name = os.path.split(img_path)
         img_list.append(img_name)
+    img_list = sorted(img_list)
     num_imgs =  len(img_list)
     #print("num of images:", num)
 

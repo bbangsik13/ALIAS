@@ -38,7 +38,7 @@ class Pix2PixHDModel(BaseModel):
         # Discriminator network
         if self.isTrain:
             use_sigmoid = opt.no_lsgan
-            netD_input_nc = 12
+            netD_input_nc = 3+3+3+3+7
             self.netD = networks.define_D(netD_input_nc, opt.ndf, opt.n_layers_D, opt.norm, use_sigmoid, 
                                           opt.num_D, not opt.no_ganFeat_loss, gpu_ids=self.gpu_ids)
 
@@ -95,15 +95,17 @@ class Pix2PixHDModel(BaseModel):
 
         fake_image =self.netG.forward(torch.cat((img_agnostic, pose, warped_c), dim=1), parse, parse_div, misalign_mask)
         # Fake Detection and Loss
-        pred_fake_pool = self.discriminate(torch.cat((img_agnostic, pose, warped_c), dim=1), fake_image, use_pool=True)
+        #print(img_agnostic.dtype,agnostic_mask.dtype,fake_image.dtype)
+        fake_image = img_agnostic * (1-agnostic_mask) + fake_image * agnostic_mask
+        pred_fake_pool = self.discriminate(torch.cat((parse, pose,img_agnostic, warped_c), dim=1), fake_image, use_pool=True)
         loss_D_fake = self.criterionGAN(pred_fake_pool, False)        
 
         # Real Detection and Loss        
-        pred_real = self.discriminate(torch.cat((img_agnostic, pose, warped_c), dim=1), ground_truth_image)
+        pred_real = self.discriminate(torch.cat((parse, pose,img_agnostic, warped_c), dim=1), ground_truth_image)
         loss_D_real = self.criterionGAN(pred_real, True)
 
         # GAN loss (Fake Passability Loss)        
-        pred_fake = self.netD.forward(torch.cat((torch.cat((img_agnostic, pose, warped_c), dim=1), fake_image), dim=1))
+        pred_fake = self.netD.forward(torch.cat((torch.cat((parse, pose,img_agnostic, warped_c), dim=1), fake_image), dim=1))
 
         loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.1               
         # GAN feature matching loss
