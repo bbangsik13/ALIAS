@@ -111,7 +111,7 @@ class VGGLoss(nn.Module):
         x_vgg, y_vgg = self.vgg(x), self.vgg(y)
 
         loss = 0
-        vgg_loss_map = torch.zeros((x.shape[0],len(x_vgg),x.shape[2],x.shape[3]))
+        vgg_loss_map = torch.zeros((x.shape[0],len(x_vgg),x.shape[2],x.shape[3])).cuda()
         for i in range(len(x_vgg)):
 
             loss += self.criterion(x_vgg[i], y_vgg[i].detach()) * self.weights[i]

@@ -111,7 +111,7 @@ class Pix2PixHDModel(BaseModel):
         # GAN feature matching loss
         loss_G_GAN_Feat = 0
 
-        Feat_loss_map = torch.zeros((fake_image.shape[0],self.opt.num_D * (len(pred_fake[0])-1),fake_image.shape[2],fake_image.shape[3]))
+        Feat_loss_map = torch.zeros((fake_image.shape[0],self.opt.num_D * (len(pred_fake[0])-1),fake_image.shape[2],fake_image.shape[3])).cuda()
 
         if not self.opt.no_ganFeat_loss:
             feat_weights = 4.0 / (self.opt.n_layers_D + 1)
@@ -119,7 +119,7 @@ class Pix2PixHDModel(BaseModel):
             for i in range(self.opt.num_D):
                 for j in range(len(pred_fake[i])-1):
                     loss_G_GAN_Feat += D_weights * feat_weights * \
-                        self.criterionFeat(pred_fake[i][j], pred_real[i][j].detach()) * self.opt.lambda_feat*2
+                        self.criterionFeat(pred_fake[i][j], pred_real[i][j].detach()) * self.opt.lambda_feat
                     diff = torch.abs(pred_fake[i][j].detach() - pred_real[i][j].detach()).mean(1) * D_weights * feat_weights * self.opt.lambda_feat
                     diff = torch.unsqueeze(diff,1)
                     diff = torch.nn.functional.interpolate(diff,size=(fake_image.shape[2],fake_image.shape[3]),mode='bilinear')
@@ -127,7 +127,7 @@ class Pix2PixHDModel(BaseModel):
 
 
         # VGG feature matching loss
-        vgg_loss_map = torch.zeros((fake_image.shape[0],5,fake_image.shape[2],fake_image.shape[3]))
+        vgg_loss_map = torch.zeros((fake_image.shape[0],5,fake_image.shape[2],fake_image.shape[3])).cuda()
         loss_G_VGG = 0
         if not self.opt.no_vgg_loss:
             loss_G_VGG,vgg_loss_map = self.criterionVGG(fake_image, ground_truth_image)

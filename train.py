@@ -177,7 +177,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                 '''
                 if True:
                     #visualizer.save_current_results(visuals, epoch, total_steps)
-                    for b in range(1):#len(paths)
+                    for b in range(len(paths)):#len(paths)
                         if not opt.no_vgg_loss:
                             name = paths[b].split('/')[-1].split('.')[0]
                             img_dir = os.path.join(opt.checkpoints_dir,opt.name,'web', 'images','epoch%.3d_step%.5d_%s_%s.jpg' % (epoch,total_steps, 'vgg_loss_map', name))
