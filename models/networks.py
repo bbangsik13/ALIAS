@@ -106,7 +106,7 @@ class VGGLoss(nn.Module):
         super(VGGLoss, self).__init__()        
         self.vgg = Vgg19().cuda()
         self.criterion = nn.L1Loss()
-        self.weights = [1.0/32, 1.0/16, 1.0/8, 1.0/4, 1.0]
+        self.weights =[1.0/4, 1.0/8, 1.0/16, 1.0/16, 1.0/8] # [1.0/32, 1.0/16, 1.0/8, 1.0/4, 1.0]
     def forward(self, x, y):              
         x_vgg, y_vgg = self.vgg(x), self.vgg(y)
 
@@ -114,9 +114,9 @@ class VGGLoss(nn.Module):
         loss_map_list = []
         for i in range(len(x_vgg)):
             split_list = []
-            loss += self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())
+            loss += self.criterion(x_vgg[i], y_vgg[i].detach()) * self.weights[i]
 
-            diff = torch.abs(x_vgg[i].detach() - y_vgg[i].detach()).mean(1) * self.weights[i] * 10
+            diff = torch.abs(x_vgg[i].detach() - y_vgg[i].detach()).mean(1) *40 * self.weights[i]
 
             split_list.append(diff)
             loss_map_list.append(split_list)

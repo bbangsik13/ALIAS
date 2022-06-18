@@ -113,13 +113,13 @@ class Pix2PixHDModel(BaseModel):
         Feat_map_list = []
         if not self.opt.no_ganFeat_loss:
             feat_weights = 1.0 / (self.opt.n_layers_D + 1)
-            D_weights = 1.0 / self.opt.num_D
+            D_weights = 4.0 / self.opt.num_D
             for i in range(self.opt.num_D):
                 D_feature_list = []
                 for j in range(len(pred_fake[i])-1):
                     loss_G_GAN_Feat += D_weights * feat_weights * \
-                        self.criterionFeat(pred_fake[i][j], pred_real[i][j].detach()) * self.opt.lambda_feat
-                    diff = torch.abs(pred_fake[i][j].detach() - pred_real[i][j].detach()).mean(1) * D_weights * feat_weights * 10
+                        self.criterionFeat(pred_fake[i][j], pred_real[i][j].detach()) * self.opt.lambda_feat*2
+                    diff = torch.abs(pred_fake[i][j].detach() - pred_real[i][j].detach()).mean(1) * D_weights * feat_weights * self.opt.lambda_feat*2
                     D_feature_list.append(diff)
 
                 Feat_map_list.append(D_feature_list)
@@ -128,21 +128,13 @@ class Pix2PixHDModel(BaseModel):
         loss_G_VGG = 0
         if not self.opt.no_vgg_loss:
             loss_G_VGG,vgg_loss_map_list = self.criterionVGG(fake_image, ground_truth_image)
-            loss_G_VGG *= self.opt.lambda_feat
+            loss_G_VGG *= self.opt.lambda_feat*4
 
         # heejune added L1 for testing
         loss_G_L1 = 0
         if not self.opt.no_L1_loss:
             L1_loss = torch.nn.L1Loss()
-            M_align = parse_div[:,2:3,:,:] - misalign_mask#- parse_div[:,6,:,:]
-            M_align = torch.tile(M_align,(1,3,1,1))
-            L1_fake_image = fake_image.clone()
-            L1_real_image = img_agnostic.clone()
-            L1_warp_cloth = warped_c.clone()
-            L1_real_image[M_align>0.0] = L1_warp_cloth[M_align>0.0]
-            M_generate = agnostic_mask - M_align
-            L1_real_image[M_generate>0.0] = L1_fake_image[M_generate>0.0]
-            loss_G_L1 = L1_loss(L1_fake_image , L1_real_image) * 4 * self.opt.lambda_feat
+            loss_G_L1 = L1_loss(warped_c , fake_image*parse.detach()[:,2:3,:,:]) * 4 * self.opt.lambda_feat
         return [ self.loss_filter( loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake, loss_G_L1 ), fake_image ] ,vgg_loss_map_list,Feat_map_list
 
     def inference(self,img_agnostic,pose, warped_c, parse, parse_div,misalign_mask,agnostic_mask):
