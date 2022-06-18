@@ -81,55 +81,30 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
 
         # whether to collect output images
         save_fake = total_steps % opt.display_freq == display_delta
-        if opt.inpaint:
 
-            if once:  # checking input
-                once = False
-                print("Ia:{}".format(data['img_agnostic'].size()), "dtype: ", data['img_agnostic'].dtype,
-                      torch.max(data['img_agnostic']), torch.min(data['img_agnostic']))
-                print("P:{}".format(data['pose'].size()), "dtype: ", data['pose'].dtype, torch.max(data['pose']),
-                      torch.min(data['pose']))
-                print("Wc:{}".format(data['warped_c'].size()), "dtype: ", data['warped_c'].dtype,
-                      torch.max(data['warped_c']), torch.min(data['warped_c']))
-                print("Sdiv:{}".format(data['parse_div'].size()), "dtype: ", data['parse_div'].dtype,
-                      torch.max(data['parse_div']), torch.min(data['parse_div']))
-                print("Mdiv:{}".format(data['misalign_mask'].size()), "dtype: ", data['misalign_mask'].dtype,
-                      torch.max(data['misalign_mask']), torch.min(data['misalign_mask']))
-                print("gt:{}".format(data['ground_truth_image'].size()), "dtype: ", data['ground_truth_image'].dtype,
-                      torch.max(data['ground_truth_image']), torch.min(data['ground_truth_image']))
-
-            Ia = Variable(data['img_agnostic'])
-            P = Variable(data['pose'])
-            Wc = Variable(data['warped_c'])
-            Sdiv = Variable(data['parse_div'])
-            Mdiv = Variable(data['misalign_mask'])
-            Igt = Variable(data['ground_truth_image'])
-
-            losses, generated = model(Ia, P, Wc, Sdiv, Mdiv, Igt, infer=save_fake)
-        else:
-            if once: # checking input
-                once = False
-                print("Ia:{}".format(data['img_agnostic'].size()),"dtype: ", data['img_agnostic'].dtype,torch.max(data['img_agnostic']),torch.min(data['img_agnostic']))
-                print("P:{}".format(data['pose'].size()),"dtype: ", data['pose'].dtype,torch.max(data['pose']),torch.min(data['pose']))
-                print("Wc:{}".format(data['warped_c'].size()),"dtype: ", data['warped_c'].dtype,torch.max(data['warped_c']),torch.min(data['warped_c']))
-                print("M_a:{}".format(data['agnostic_mask'].size()),"dtype: ", data['agnostic_mask'].dtype,torch.max(data['agnostic_mask']),torch.min(data['agnostic_mask']))
-                print("S:{}".format(data['parse'].size()),"dtype: ", data['parse'].dtype,torch.max(data['parse']),torch.min(data['parse']))
-                print("Sdiv:{}".format(data['parse_div'].size()),"dtype: ", data['parse_div'].dtype,torch.max(data['parse_div']),torch.min(data['parse_div']))
-                print("Mdiv:{}".format(data['misalign_mask'].size()),"dtype: ", data['misalign_mask'].dtype,torch.max(data['misalign_mask']),torch.min(data['misalign_mask']))
-                print("gt:{}".format(data['ground_truth_image'].size()),"dtype: ", data['ground_truth_image'].dtype,torch.max(data['ground_truth_image']),torch.min(data['ground_truth_image']))
+        if once: # checking input
+            once = False
+            print("Ia:{}".format(data['img_agnostic'].size()),"dtype: ", data['img_agnostic'].dtype,torch.max(data['img_agnostic']),torch.min(data['img_agnostic']))
+            print("P:{}".format(data['pose'].size()),"dtype: ", data['pose'].dtype,torch.max(data['pose']),torch.min(data['pose']))
+            print("Wc:{}".format(data['warped_c'].size()),"dtype: ", data['warped_c'].dtype,torch.max(data['warped_c']),torch.min(data['warped_c']))
+            print("M_a:{}".format(data['agnostic_mask'].size()),"dtype: ", data['agnostic_mask'].dtype,torch.max(data['agnostic_mask']),torch.min(data['agnostic_mask']))
+            print("S:{}".format(data['parse'].size()),"dtype: ", data['parse'].dtype,torch.max(data['parse']),torch.min(data['parse']))
+            print("Sdiv:{}".format(data['parse_div'].size()),"dtype: ", data['parse_div'].dtype,torch.max(data['parse_div']),torch.min(data['parse_div']))
+            print("Mdiv:{}".format(data['misalign_mask'].size()),"dtype: ", data['misalign_mask'].dtype,torch.max(data['misalign_mask']),torch.min(data['misalign_mask']))
+            print("gt:{}".format(data['ground_truth_image'].size()),"dtype: ", data['ground_truth_image'].dtype,torch.max(data['ground_truth_image']),torch.min(data['ground_truth_image']))
 
 
-            Ia = Variable(data['img_agnostic'])
-            P  = Variable(data['pose'])
-            Wc = Variable(data['warped_c'])
-            Ma = Variable(data['agnostic_mask'])
-            S =  Variable(data['parse'])
-            Sdiv = Variable(data['parse_div'])
-            Mdiv = Variable(data['misalign_mask'])
-            Igt  = Variable(data['ground_truth_image'])
-            paths = data['path']
+        Ia = Variable(data['img_agnostic'])
+        P  = Variable(data['pose'])
+        Wc = Variable(data['warped_c'])
+        Ma = Variable(data['agnostic_mask'])
+        S =  Variable(data['parse'])
+        Sdiv = Variable(data['parse_div'])
+        Mdiv = Variable(data['misalign_mask'])
+        Igt  = Variable(data['ground_truth_image'])
+        paths = data['path']
 
-            (losses, generated),vgg_loss_map_list,Feat_map_list = model(Ia, P, Wc, S, Sdiv, Mdiv,Ma ,Igt, infer=save_fake)
+        (losses, generated),vgg_loss_map,Feat_loss_map = model(Ia, P, Wc, S, Sdiv, Mdiv,Ma ,Igt, infer=save_fake)
         #print(torch.unique(generated))
         # sum per device losses
 
@@ -173,36 +148,18 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                         visuals = OrderedDict([('gen{:05d}'.format(data_index), util.tensor2im(generated.data[0])),
                                    ('gt{:05d}'.format(data_index), util.tensor2im(data['ground_truth_image'][0]))])
                     else:
-                        if opt.inpaint:
-                            visuals = OrderedDict([('gen{:05d}'.format(data_index), util.tensor2im(generated.data[0])),
-                                                   ('Ia{:05d}'.format(data_index),
-                                                    util.tensor2im(data['img_agnostic'][0])),
-                                                   ('warpedC{:05d}'.format(data_index),
-                                                    util.tensor2im(data['warped_c'][0])),
-                                                   ('pose{:05d}'.format(data_index), util.tensor2im(data['pose'][0])),
-                                                   ('Sdiv{:05d}'.format(data_index),
-                                                    util.tensor2label(data['parse_div'][0], 8)),
-                                                   ('Mdiv{:05d}'.format(data_index),
-                                                    util.tensor2im(data['misalign_mask'][0])),
-                                                   ('gt{:05d}'.format(data_index),
-                                                    util.tensor2im(data['ground_truth_image'][0])),
-                                                   # ('cm{:05d}'.format(data_index), util.tensor2im(c_mask[0])),
-                                                   # ('gt2{:05d}'.format(data_index), util.tensor2im(Igt2[0])),
+                        visuals = OrderedDict([('gen{:05d}'.format(data_index), util.tensor2im(generated.data[0])),
+                                   ('Ia{:05d}'.format(data_index), util.tensor2im(data['img_agnostic'][0])),
+                                   ('warpedC{:05d}'.format(data_index), util.tensor2im(data['warped_c'][0])),
+                                   ('S{:05d}'.format(data_index), util.tensor2label(data['parse'][0], 7)),
+                                   ('pose{:05d}'.format(data_index), util.tensor2im(data['pose'][0])),
+                                   ('Sdiv{:05d}'.format(data_index), util.tensor2label(data['parse_div'][0], 8)),
+                                   ('Mdiv{:05d}'.format(data_index), util.tensor2im(data['misalign_mask'][0])),
+                                   ('gt{:05d}'.format(data_index), util.tensor2im(data['ground_truth_image'][0])),
+                                   #('cm{:05d}'.format(data_index), util.tensor2im(c_mask[0])),
+                                   #('gt2{:05d}'.format(data_index), util.tensor2im(Igt2[0])),
 
-                                                   ])
-                        else:
-                            visuals = OrderedDict([('gen{:05d}'.format(data_index), util.tensor2im(generated.data[0])),
-                                       ('Ia{:05d}'.format(data_index), util.tensor2im(data['img_agnostic'][0])),
-                                       ('warpedC{:05d}'.format(data_index), util.tensor2im(data['warped_c'][0])),
-                                       ('S{:05d}'.format(data_index), util.tensor2label(data['parse'][0], 7)),
-                                       ('pose{:05d}'.format(data_index), util.tensor2im(data['pose'][0])),
-                                       ('Sdiv{:05d}'.format(data_index), util.tensor2label(data['parse_div'][0], 8)),
-                                       ('Mdiv{:05d}'.format(data_index), util.tensor2im(data['misalign_mask'][0])),
-                                       ('gt{:05d}'.format(data_index), util.tensor2im(data['ground_truth_image'][0])),
-                                       #('cm{:05d}'.format(data_index), util.tensor2im(c_mask[0])),
-                                       #('gt2{:05d}'.format(data_index), util.tensor2im(Igt2[0])),
-
-                                       ])
+                                   ])
                         #once2 = False
                 '''
                 visuals = OrderedDict([('input_label', util.tensor2label(data['label'][0], opt.label_nc)),
@@ -220,39 +177,41 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                 '''
                 if True:
                     #visualizer.save_current_results(visuals, epoch, total_steps)
-                    for b in range(len(paths)):
-                        name = paths[b].split('/')[-1].split('.')[0]
-                        img_dir = os.path.join(opt.checkpoints_dir,opt.name,'web', 'images','epoch%.3d_step%.5d_%s_%s.jpg' % (epoch,total_steps, 'vgg_loss_map', name))
-                        plt.figure(figsize=(16, 8))
-                        for i in range(5):
-                            loss_map = np.squeeze(vgg_loss_map_list[i][b].cpu().numpy())
-                            plt.subplot(2, 4, i + 1), plt.imshow(loss_map), \
-                            plt.title(
-                                    f"%dth feature\navr:%.5f"%(i,np.average(loss_map))),
-                            plt.colorbar(),
-                            plt.axis('off')
-                        fake_img = np.transpose(((generated.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
-                        true_img = np.transpose(((Igt.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
-                        plt.subplot(2,4,7),plt.imshow(fake_img),plt.title('fake'),plt.axis('off')
-                        plt.subplot(2,4,8),plt.imshow(true_img),plt.title('true'),plt.axis('off')
-                        plt.suptitle("G_VGG:%.2f"%(errors['G_VGG']))
-                        plt.savefig(img_dir)
-                        plt.clf()
-
-                        img_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web', 'images',
-                                               'epoch%.3d_step%.5d_%s_%s.jpg' % (epoch,total_steps, 'Feat_loss_map', name))
-                        for i in range(len(Feat_map_list)):
-                            for j in range(len(Feat_map_list[i])):
-                                loss_map = np.squeeze(Feat_map_list[i][j].cpu().numpy())
-                                plt.subplot(2,5,5*i+j+1), plt.imshow(loss_map),\
-                                plt.title(f"%dth D, %dth feature\navr:%.5f"%(i,j,np.average(loss_map))),
+                    for b in range(1):#len(paths)
+                        if not opt.no_vgg_loss:
+                            name = paths[b].split('/')[-1].split('.')[0]
+                            img_dir = os.path.join(opt.checkpoints_dir,opt.name,'web', 'images','epoch%.3d_step%.5d_%s_%s.jpg' % (epoch,total_steps, 'vgg_loss_map', name))
+                            plt.figure(figsize=(16, 8))
+                            for i in range(5):
+                                loss_map = np.squeeze(vgg_loss_map[b,i,:,:].cpu().numpy())
+                                plt.subplot(2, 4, i + 1), plt.imshow(loss_map), \
+                                plt.title(
+                                        f"%dth feature\navr:%.5f"%(i,np.average(loss_map))),
                                 plt.colorbar(),
                                 plt.axis('off')
-                        plt.subplot(2,5,5),plt.imshow(fake_img),plt.title('fake'),plt.axis('off')
-                        plt.subplot(2, 5, 10), plt.imshow(true_img), plt.title('true'),plt.axis('off')
-                        plt.suptitle("G_GAN_Feat:%.2f" % (errors['G_GAN_Feat']))
-                        plt.savefig(img_dir)
-                        plt.clf()
+                            fake_img = np.transpose(((generated.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
+                            true_img = np.transpose(((Igt.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
+                            plt.subplot(2,4,7),plt.imshow(fake_img),plt.title('fake'),plt.axis('off')
+                            plt.subplot(2,4,8),plt.imshow(true_img),plt.title('true'),plt.axis('off')
+                            plt.suptitle("G_VGG:%.2f"%(errors['G_VGG']))
+                            plt.savefig(img_dir)
+                            plt.clf()
+
+                        if not opt.no_ganFeat_loss:
+                            img_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web', 'images',
+                                                   'epoch%.3d_step%.5d_%s_%s.jpg' % (epoch,total_steps, 'Feat_loss_map', name))
+                            for i in range(opt.num_D):
+                                for j in range(Feat_loss_map.shape[1]//opt.num_D):
+                                    loss_map = np.squeeze(Feat_loss_map[b,Feat_loss_map.shape[1]//opt.num_D*i+j,:,:].cpu().numpy())
+                                    plt.subplot(2,5,5*i+j+1), plt.imshow(loss_map),\
+                                    plt.title(f"%dth D, %dth feature\navr:%.5f"%(i,j,np.average(loss_map))),
+                                    plt.colorbar(),
+                                    plt.axis('off')
+                            plt.subplot(2,5,5),plt.imshow(fake_img),plt.title('fake'),plt.axis('off')
+                            plt.subplot(2, 5, 10), plt.imshow(true_img), plt.title('true'),plt.axis('off')
+                            plt.suptitle("G_GAN_Feat:%.2f" % (errors['G_GAN_Feat']))
+                            plt.savefig(img_dir)
+                            plt.clf()
 
                         '''
                         OrderedDict([('gen{:05d}'.format(data_index), util.tensor2im(generated.data[0])),
@@ -267,12 +226,12 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                         img_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web', 'images',
                                                'epoch%.3d_step%.5d_%s_%s.jpg' % (
                                                epoch, total_steps, 'inout', name))
-                        parse = util.tensor2label(data['parse'][0], 7)
-                        warped_c = util.tensor2im(data['warped_c'][0])
-                        pose = util.tensor2im(data['pose'][0])
-                        parse_div = util.tensor2label(data['parse_div'][0], 8)
-                        mask_div = util.tensor2im(data['misalign_mask'][0])
-                        img_agnostic = util.tensor2im(data['img_agnostic'][0])
+                        parse = util.tensor2label(data['parse'][b], 7)
+                        warped_c = util.tensor2im(data['warped_c'][b])
+                        pose = util.tensor2im(data['pose'][b])
+                        parse_div = util.tensor2label(data['parse_div'][b], 8)
+                        mask_div = util.tensor2im(data['misalign_mask'][b])
+                        img_agnostic = util.tensor2im(data['img_agnostic'][b])
                         plt.subplot(2,4,1),plt.imshow(fake_img),plt.title('fake img'),plt.axis('off')
                         plt.subplot(2,4,2),plt.imshow(true_img),plt.title('true img'),plt.axis('off')
                         plt.subplot(2,4,3),plt.imshow(img_agnostic),plt.title('img agnostic'),plt.axis('off')

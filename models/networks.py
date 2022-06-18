@@ -106,21 +106,21 @@ class VGGLoss(nn.Module):
         super(VGGLoss, self).__init__()        
         self.vgg = Vgg19().cuda()
         self.criterion = nn.L1Loss()
-        self.weights =[1.0/4, 1.0/8, 1.0/16, 1.0/16, 1.0/8] # [1.0/32, 1.0/16, 1.0/8, 1.0/4, 1.0]
+        self.weights =[1.0/32, 1.0/16, 1.0/8, 1.0/4, 1.0]
     def forward(self, x, y):              
         x_vgg, y_vgg = self.vgg(x), self.vgg(y)
 
         loss = 0
-        loss_map_list = []
+        vgg_loss_map = torch.zeros((x.shape[0],len(x_vgg),x.shape[2],x.shape[3]))
         for i in range(len(x_vgg)):
-            split_list = []
+
             loss += self.criterion(x_vgg[i], y_vgg[i].detach()) * self.weights[i]
 
-            diff = torch.abs(x_vgg[i].detach() - y_vgg[i].detach()).mean(1) *40 * self.weights[i]
-
-            split_list.append(diff)
-            loss_map_list.append(split_list)
-        return loss , loss_map_list
+            diff = torch.abs(x_vgg[i].detach() - y_vgg[i].detach()).mean(1) * self.weights[i]
+            diff = torch.unsqueeze(diff, 1)
+            diff = torch.nn.functional.interpolate(diff, size=(x.shape[2], x.shape[3]), mode='bilinear')
+            vgg_loss_map[:, i, :, :] = diff
+        return loss , vgg_loss_map
 
 from torch.nn.utils.spectral_norm import spectral_norm
 from torch import nn
