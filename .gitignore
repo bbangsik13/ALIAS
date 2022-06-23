@@ -4,3 +4,5 @@
 /dataset
 #ignore shell_file(local vs AI server)
 train.sh
+#ignore wandb
+/wandb
