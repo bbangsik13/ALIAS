@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "train.py", line 23, in <module>
-    wandb.config.update(TrainOptions.parse_args())
-AttributeError: type object 'TrainOptions' has no attribute 'parse_args'
