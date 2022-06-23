@@ -1,0 +1,299 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.12.11
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.8.5
+    start_time: 1655788442
+    t:
+      1:
+      - 1
+      2:
+      - 1
+      - 41
+      4: 3.8.5
+      5: 0.12.11
+      8:
+      - 5
+alias_checkpoint:
+  desc: null
+  value: alias_final.pth
+batchSize:
+  desc: null
+  value: 2
+beta1:
+  desc: null
+  value: 0.5
+bottom_agnostic:
+  desc: null
+  value: true
+checkpoint_dir:
+  desc: null
+  value: ./checkpoints/
+checkpoints_dir:
+  desc: null
+  value: checkpoints
+cloth_list_bottom:
+  desc: null
+  value: bottoms.txt
+continue_train:
+  desc: null
+  value: false
+data_type:
+  desc: null
+  value: 32
+dataroot:
+  desc: null
+  value: /data/bbangsik/3.2StyleVitonFullBodyBot_PBAFN/results/styleviton_fb_top_pbafn
+dataset_etri:
+  desc: null
+  value: true
+dataset_list:
+  desc: null
+  value: bottomClothCatalog.txt
+dataset_mode:
+  desc: null
+  value: train
+debug:
+  desc: null
+  value: false
+display_freq:
+  desc: null
+  value: 100
+display_winsize:
+  desc: null
+  value: 512
+feat_num:
+  desc: null
+  value: 3
+fineSize:
+  desc: null
+  value: 512
+gmm_checkpoint:
+  desc: null
+  value: gmm_final.pth
+gpu_ids:
+  desc: null
+  value:
+  - 0
+  - 3
+grid_size:
+  desc: null
+  value: 5
+init_type:
+  desc: null
+  value: xavier
+init_variance:
+  desc: null
+  value: 0.02
+inpaint:
+  desc: null
+  value: false
+input_height:
+  desc: null
+  value: 1024
+input_nc:
+  desc: null
+  value: 3
+input_width:
+  desc: null
+  value: 768
+instance_feat:
+  desc: null
+  value: false
+isTrain:
+  desc: null
+  value: true
+label_feat:
+  desc: null
+  value: false
+label_nc:
+  desc: null
+  value: 35
+lambda_feat:
+  desc: null
+  value: 10.0
+loadSize:
+  desc: null
+  value: 1024
+load_features:
+  desc: null
+  value: false
+load_height:
+  desc: null
+  value: 1024
+load_pretrain:
+  desc: null
+  value: ''
+load_width:
+  desc: null
+  value: 768
+lr:
+  desc: null
+  value: 0.0002
+max_dataset_size:
+  desc: null
+  value: .inf
+model:
+  desc: null
+  value: pix2pixHD
+nThreads:
+  desc: null
+  value: 6
+n_blocks_global:
+  desc: null
+  value: 9
+n_blocks_local:
+  desc: null
+  value: 3
+n_clusters:
+  desc: null
+  value: 10
+n_downsample_E:
+  desc: null
+  value: 4
+n_downsample_global:
+  desc: null
+  value: 4
+n_layers_D:
+  desc: null
+  value: 3
+n_local_enhancers:
+  desc: null
+  value: 1
+name:
+  desc: null
+  value: ALIAS_ETRI_TOP_pbafn_vis
+ndf:
+  desc: null
+  value: 64
+nef:
+  desc: null
+  value: 16
+netG:
+  desc: null
+  value: global
+ngf:
+  desc: null
+  value: 64
+niter:
+  desc: null
+  value: 5
+niter_decay:
+  desc: null
+  value: 5
+niter_stable:
+  desc: null
+  value: 0
+no_L1_loss:
+  desc: null
+  value: true
+no_flip:
+  desc: null
+  value: true
+no_ganFeat_loss:
+  desc: null
+  value: false
+no_html:
+  desc: null
+  value: false
+no_instance:
+  desc: null
+  value: false
+no_lsgan:
+  desc: null
+  value: false
+no_vgg_loss:
+  desc: null
+  value: false
+norm:
+  desc: null
+  value: instance
+norm_G:
+  desc: null
+  value: spectralaliasinstance
+num_D:
+  desc: null
+  value: 2
+num_upsampling_layers:
+  desc: null
+  value: most
+output_nc:
+  desc: null
+  value: 3
+phase:
+  desc: null
+  value: train
+pool_size:
+  desc: null
+  value: 0
+port:
+  desc: null
+  value: 80
+print_freq:
+  desc: null
+  value: 100
+print_network:
+  desc: null
+  value: false
+resize_or_crop:
+  desc: null
+  value: scale_width
+save_dir:
+  desc: null
+  value: ./results/
+save_epoch_freq:
+  desc: null
+  value: 10
+save_latest_freq:
+  desc: null
+  value: 1000
+seg_checkpoint:
+  desc: null
+  value: seg_final.pth
+semantic_nc:
+  desc: null
+  value: 13
+serial_batches:
+  desc: null
+  value: true
+shuffle:
+  desc: null
+  value: false
+swap_warped_cloth:
+  desc: null
+  value: false
+tf_log:
+  desc: null
+  value: false
+use_alias:
+  desc: null
+  value: false
+use_dropout:
+  desc: null
+  value: false
+use_gmm:
+  desc: null
+  value: false
+use_previous_network_output:
+  desc: null
+  value: false
+use_warped_cloth:
+  desc: null
+  value: false
+verbose:
+  desc: null
+  value: false
+warped_cloth_dir:
+  desc: null
+  value: dataset
+which_epoch:
+  desc: null
+  value: latest
+workers:
+  desc: null
+  value: 1

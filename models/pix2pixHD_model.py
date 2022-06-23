@@ -114,7 +114,7 @@ class Pix2PixHDModel(BaseModel):
         Feat_loss_map = torch.zeros((fake_image.shape[0],self.opt.num_D * (len(pred_fake[0])-1),fake_image.shape[2],fake_image.shape[3])).cuda()
 
         if not self.opt.no_ganFeat_loss:
-            feat_weights = 4.0 / (self.opt.n_layers_D + 1)
+            feat_weights = 1.0 / (self.opt.n_layers_D + 1)
             D_weights = 1.0 / self.opt.num_D
             for i in range(self.opt.num_D):
                 for j in range(len(pred_fake[i])-1):

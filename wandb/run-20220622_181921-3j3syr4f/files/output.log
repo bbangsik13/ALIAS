@@ -1,0 +1,10 @@
+train.py:11: DeprecationWarning: fractions.gcd() is deprecated. Use math.gcd() instead.
+  def lcm(a,b): return abs(a * b)/fractions.gcd(a,b) if a and b else 0
+Traceback (most recent call last):
+  File "train.py", line 43, in <module>
+    data_loader = CreateDataLoader(opt)
+  File "/data/bbangsik/ALIAS/data/data_loader.py", line 13, in CreateDataLoader
+    test_dataset = VITONDataset(opt)
+  File "/data/bbangsik/ALIAS/data/Style_Viton_DataLoader.py", line 76, in __init__
+    with open(osp.join(opt.dataroot,opt.dataset_mode, opt.dataset_list), 'r') as f:
+FileNotFoundError: [Errno 2] No such file or directory: '/data/bbangsik/3.2StyleVitonFullBodyBot_PBAFN/results/styleviton_fb_top_pbafn/train/bottomClothCatalog.txt'

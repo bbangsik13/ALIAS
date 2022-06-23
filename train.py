@@ -15,10 +15,12 @@ from data.data_loader import CreateDataLoader
 from models.models import create_model
 import util.util as util
 from util.visualizer import Visualizer
-
-
+from tqdm import tqdm
+import wandb
 # 1. option 
 opt = TrainOptions().parse()
+wandb.init(project=opt.name,reinit=True)
+wandb.config.update(opt)
 iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
 if opt.continue_train:
     try:
@@ -46,10 +48,9 @@ else:
     dataset = data_loader.data_loader
 dataset_size = len(data_loader)
 print('#training images = %d' % dataset_size)
-
 # 3. create model 
 model = create_model(opt)
-
+wandb.watch(model)
 # loggers 
 visualizer = Visualizer(opt)
 
@@ -72,7 +73,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
         epoch_iter = epoch_iter % dataset_size
 
     save_epoch_iter = epoch_iter  # heejun
-    for i, data in enumerate(dataset, start=epoch_iter):
+    for i, data in enumerate(tqdm(dataset), start=epoch_iter):
 
         if total_steps % opt.print_freq == print_delta:
             iter_start_time = time.time()
@@ -127,17 +128,19 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
         optimizer_D.zero_grad()
         loss_D.backward()
         optimizer_D.step()
-        '''errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
-        eta = (time.time() - epoch_start_time) * (len(dataset) / opt.batchSize - i) / (i - save_epoch_iter + 1)
-        visualizer.print_current_errors(epoch, epoch_iter, errors, eta)'''
+        errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
+        if total_steps % 100 == print_delta:
+            wandb.log(errors)
+        #eta = (time.time() - epoch_start_time) * (len(dataset) / opt.batchSize - i) / (i - save_epoch_iter + 1)
+        #visualizer.print_current_errors(epoch, epoch_iter, errors, eta)
         ############## Display results and errors ##########
         ### print out errors
-
+        
         if total_steps % opt.print_freq == print_delta:
-            errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
-            eta = (time.time() - epoch_start_time)* (len(dataset)/opt.batchSize - i)/(i - save_epoch_iter +1)
-            visualizer.print_current_errors(epoch, epoch_iter, errors, eta)
-            visualizer.plot_current_errors(errors, total_steps)
+            #errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
+            #eta = (time.time() - epoch_start_time)* (len(dataset)/opt.batchSize - i)/(i - save_epoch_iter +1)
+            #visualizer.print_current_errors(epoch, epoch_iter, errors, eta)
+            #visualizer.plot_current_errors(errors, total_steps)
             #call(["nvidia-smi", "--format=csv", "--query-gpu=memory.used,memory.free"])
 
             ### display output images
@@ -178,10 +181,14 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                 if True:
                     #visualizer.save_current_results(visuals, epoch, total_steps)
                     for b in range(len(paths)):#len(paths)
+                        name = paths[b].split('/')[-1].split('.')[0]
+                        fake_img = np.transpose(((generated.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
+                        true_img = np.transpose(((Igt.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
+                        plt.figure(figsize=(16, 8))
                         if not opt.no_vgg_loss:
-                            name = paths[b].split('/')[-1].split('.')[0]
+                            #name = paths[b].split('/')[-1].split('.')[0]
                             img_dir = os.path.join(opt.checkpoints_dir,opt.name,'web', 'images','epoch%.3d_step%.5d_%s_%s.jpg' % (epoch,total_steps, 'vgg_loss_map', name))
-                            plt.figure(figsize=(16, 8))
+                            #plt.figure(figsize=(16, 8))
                             for i in range(5):
                                 loss_map = np.squeeze(vgg_loss_map[b,i,:,:].cpu().numpy())
                                 plt.subplot(2, 4, i + 1), plt.imshow(loss_map), \
@@ -189,8 +196,8 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                                         f"%dth feature\navr:%.5f"%(i,np.average(loss_map))),
                                 plt.colorbar(),
                                 plt.axis('off')
-                            fake_img = np.transpose(((generated.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
-                            true_img = np.transpose(((Igt.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
+                            #fake_img = np.transpose(((generated.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
+                            #true_img = np.transpose(((Igt.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
                             plt.subplot(2,4,7),plt.imshow(fake_img),plt.title('fake'),plt.axis('off')
                             plt.subplot(2,4,8),plt.imshow(true_img),plt.title('true'),plt.axis('off')
                             plt.suptitle("G_VGG:%.2f"%(errors['G_VGG']))
