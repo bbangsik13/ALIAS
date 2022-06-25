@@ -5,6 +5,7 @@ from torch.autograd import Variable
 from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
+import cv2
 
 class Pix2PixHDModel(BaseModel):
 
@@ -97,7 +98,20 @@ class Pix2PixHDModel(BaseModel):
         # Fake Detection and Loss
         #print(img_agnostic.dtype,agnostic_mask.dtype,fake_image.dtype)
         fake_image = img_agnostic * (1-agnostic_mask) + fake_image * agnostic_mask
-        #fake_image = warped_c * parse_div[:,2:3,:,:] + fake_image * (1-parse_div[:,2:3,:,:])
+
+        cloth_mask = parse_div.detach()[:,2,:,:]
+
+        cloth_mask = cloth_mask.cpu().numpy()
+        for batch in range(cloth_mask.shape[0]):
+            temp = cloth_mask[batch] > 0
+            temp = ((temp+1)/2*255).astype(np.uint8)
+            temp = cv2.erode(temp, np.ones((3, 3), np.uint8), iterations=5)
+            temp = temp.astype(np.float32)/255*2-1
+            cloth_mask[batch] = temp
+        cloth_mask = torch.from_numpy(cloth_mask[:,np.newaxis,:,:]).cuda()
+
+
+        fake_image = warped_c * cloth_mask + fake_image * (1-cloth_mask)
         pred_fake_pool = self.discriminate(torch.cat((parse, pose,img_agnostic, warped_c), dim=1), fake_image, use_pool=True)
         loss_D_fake = self.criterionGAN(pred_fake_pool, False)        
 

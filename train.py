@@ -17,10 +17,12 @@ import util.util as util
 from util.visualizer import Visualizer
 from tqdm import tqdm
 import wandb
-# 1. option 
+# 1. option
+USE_WANDB = True
 opt = TrainOptions().parse()
-wandb.init(project=opt.name,reinit=True)
-wandb.config.update(opt)
+if USE_WANDB:
+    wandb.init(project=opt.name,reinit=True)
+    wandb.config.update(opt)
 iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
 if opt.continue_train:
     try:
@@ -50,7 +52,8 @@ dataset_size = len(data_loader)
 print('#training images = %d' % dataset_size)
 # 3. create model 
 model = create_model(opt)
-wandb.watch(model)
+if USE_WANDB:
+    wandb.watch(model)
 # loggers 
 visualizer = Visualizer(opt)
 
@@ -130,13 +133,14 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
         optimizer_D.step()
         errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
         if total_steps % 100 == print_delta:
-            wandb.log(errors)
+            if USE_WANDB:
+                wandb.log(errors)
         #eta = (time.time() - epoch_start_time) * (len(dataset) / opt.batchSize - i) / (i - save_epoch_iter + 1)
         #visualizer.print_current_errors(epoch, epoch_iter, errors, eta)
         ############## Display results and errors ##########
         ### print out errors
         
-        if total_steps % opt.print_freq == print_delta:
+        if True:# total_steps % opt.print_freq == print_delta:
             #errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
             #eta = (time.time() - epoch_start_time)* (len(dataset)/opt.batchSize - i)/(i - save_epoch_iter +1)
             #visualizer.print_current_errors(epoch, epoch_iter, errors, eta)
