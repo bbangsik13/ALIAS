@@ -12,5 +12,7 @@ echo http://125.6.38.24:8006/
 #python flask_viewer.py 8010 checkpoints/ETRI-Bot_new_L1/web/images
 #MPV TOP mfpng
 #python flask_viewer.py 8006 checkpoints/ALIAS_ETRI_BOT_clothflow_vis_mask_v3/web/images
-python flask_viewer.py 8006 checkpoints/ALIAS_ETRI_TOP_pbafn_mask_vis/web/images
-#python flask_viewer.py 8006 checkpoints/ALIAS_ETRI_BOT_pbafn_vis/web/images
+#python flask_viewer.py 8006 checkpoints/ALIAS_ETRI_TOP_pbafn_mask_vis_v2/web/images
+python flask_viewer.py 8006 checkpoints/ALIAS_ETRI_TOP_pbafn_swap/web/images
+#python flask_viewer.py 8006 checkpoints/ALIAS_ETRI_TOP_pbafn_identity/web/images 
+#python flask_viewer.py 8006 checkpoints/ALIAS_ETRI_TOP_pbafn_vis_v2/web/images

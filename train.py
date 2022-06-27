@@ -96,18 +96,26 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
             print("Sdiv:{}".format(data['parse_div'].size()),"dtype: ", data['parse_div'].dtype,torch.max(data['parse_div']),torch.min(data['parse_div']))
             print("Mdiv:{}".format(data['misalign_mask'].size()),"dtype: ", data['misalign_mask'].dtype,torch.max(data['misalign_mask']),torch.min(data['misalign_mask']))
             print("gt:{}".format(data['ground_truth_image'].size()),"dtype: ", data['ground_truth_image'].dtype,torch.max(data['ground_truth_image']),torch.min(data['ground_truth_image']))
-
+            print("Sc:{}".format(data['ground_truth_cloth'].size()),"dtype: ", data['ground_truth_cloth'].dtype,torch.max(data['ground_truth_cloth']),torch.min(data['ground_truth_cloth']))
 
         Ia = Variable(data['img_agnostic'])
         P  = Variable(data['pose'])
+        '''if total_steps % opt.print_freq == print_delta:
+            Wc = Variable(data['warped_c'])
+        else:
+            Wc = Variable(data['ground_truth_cloth'])'''
         Wc = Variable(data['warped_c'])
+        #Sc = Variable(data['ground_truth_cloth'])
         Ma = Variable(data['agnostic_mask'])
         S =  Variable(data['parse'])
         Sdiv = Variable(data['parse_div'])
         Mdiv = Variable(data['misalign_mask'])
         Igt  = Variable(data['ground_truth_image'])
         paths = data['path']
-
+        
+    
+   
+    
         (losses, generated),vgg_loss_map,Feat_loss_map = model(Ia, P, Wc, S, Sdiv, Mdiv,Ma ,Igt, infer=save_fake)
         #print(torch.unique(generated))
         # sum per device losses
@@ -115,14 +123,16 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
         losses = [torch.mean(x) if not isinstance(x, int) else x for x in losses]
         loss_dict = dict(zip(model.module.loss_names, losses))
         # calculate final loss scalar
-        if epoch>opt.niter_stable:
-            loss_D = (loss_dict['D_fake'] + loss_dict['D_real']) * 0.5
-            loss_G = loss_dict['G_GAN'] + loss_dict.get('G_GAN_Feat',0) + loss_dict.get('G_VGG',0) + loss_dict.get('G_L1', 0) * 0
-        else:
-            loss_D = (loss_dict['D_fake'] + loss_dict['D_real']) *0
-            loss_G = loss_dict['G_GAN'] * 0 + loss_dict.get('G_GAN_Feat',0) * 0 + loss_dict.get('G_VGG',0) + loss_dict.get('G_L1', 0)
+        
+        loss_D = (loss_dict['D_fake'] + loss_dict['D_real']) * 0.5
+        loss_G = loss_dict['G_GAN'] + loss_dict.get('G_GAN_Feat',0) + loss_dict.get('G_VGG',0) + loss_dict.get('G_L1', 0)
+        
+        '''if total_steps % opt.print_freq == print_delta:
+            loss_D = loss_D * 0
+            loss_G = loss_G * 0'''
         ############### Backward Pass ####################
         # update generator weights
+        
         optimizer_G.zero_grad()
         loss_G.backward()
         optimizer_G.step()
@@ -131,8 +141,9 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
         optimizer_D.zero_grad()
         loss_D.backward()
         optimizer_D.step()
+
         errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
-        if total_steps % 100 == print_delta:
+        if (total_steps % 100 == print_delta):
             if USE_WANDB:
                 wandb.log(errors)
         #eta = (time.time() - epoch_start_time) * (len(dataset) / opt.batchSize - i) / (i - save_epoch_iter + 1)
@@ -140,7 +151,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
         ############## Display results and errors ##########
         ### print out errors
         
-        if True:# total_steps % opt.print_freq == print_delta:
+        if total_steps % opt.print_freq == print_delta:
             #errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
             #eta = (time.time() - epoch_start_time)* (len(dataset)/opt.batchSize - i)/(i - save_epoch_iter +1)
             #visualizer.print_current_errors(epoch, epoch_iter, errors, eta)
@@ -184,7 +195,9 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                 '''
                 if True:
                     #visualizer.save_current_results(visuals, epoch, total_steps)
-                    for b in range(len(paths)):#len(paths)
+                
+
+                    for b in range(1):#len(paths)
                         name = paths[b].split('/')[-1].split('.')[0]
                         fake_img = np.transpose(((generated.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))
                         true_img = np.transpose(((Igt.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))

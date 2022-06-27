@@ -110,6 +110,13 @@ class AlignedDataset(BaseDataset):
         parse_div = np.load(parse_div_path)
         #print(parse_div.shape)
         parse_div = np.squeeze(parse_div)
+        if True:#erode cloth mask(remove tag of warped cloth)
+            align_mask = parse_div[2] > 0
+            align_mask = ((align_mask +1)/2*255).astype(np.uint8)
+            align_mask = cv2.erode(align_mask,np.ones((3,3)),iterations=5)
+            align_mask = align_mask.astype(np.float32)/255*2-1
+            parse_div[7] = parse_div[7] + (parse_div[2]-align_mask)
+            parse_div[2] = align_mask
         parse_div_tensor = torch.from_numpy(parse_div)
 
         ## misalign_mask
@@ -131,13 +138,12 @@ class AlignedDataset(BaseDataset):
 
         img_agnostic_tensor = (1-agnostic_mask_tensor) * img_agnostic_tensor
 
-        if self.opt.swap_warped_cloth:
-            cloth_mask = (parse_tensor[2:3,:,:]>0).repeat(3,1,1)
+        if True:
+            cloth_mask = (parse_div_tensor[2:3,:,:]>0)
             #plt.subplot(1, 2, 1), plt.imshow(
             #    ((np.transpose(warped_c_tensor.numpy(), (1, 2, 0)) + 1) / 2 * 255).astype(np.uint8))
-            ground_truth_cloth = ground_truth_image_tensor.clone()
-            ground_truth_cloth[torch.logical_not(cloth_mask)] = 1.0
-            warped_c_tensor = ground_truth_cloth
+            ground_truth_cloth = ground_truth_image_tensor.clone() * cloth_mask
+            warped_c_tensor = warped_c_tensor * cloth_mask
             #plt.subplot(1, 2, 2), plt.imshow(
             #    ((np.transpose(warped_c_tensor.numpy(), (1, 2, 0)) + 1) / 2 * 255).astype(np.uint8))
             #plt.subplot(1,3,1),plt.imshow(((np.transpose(ground_truth_image_tensor.numpy(), (1, 2, 0)) + 1) / 2 * 255).astype(np.uint8))
@@ -155,6 +161,7 @@ class AlignedDataset(BaseDataset):
                 'misalign_mask':misalign_mask_tensor,
                 'ground_truth_image':ground_truth_image_tensor,
                 'agnostic_mask': agnostic_mask_tensor,
+                'ground_truth_cloth':ground_truth_cloth,
                 'path':ground_truth_path}
 
         return input_dict
