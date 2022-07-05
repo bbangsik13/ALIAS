@@ -32,12 +32,6 @@ class AlignedDataset(BaseDataset):
         self.warped_c_paths = sorted(glob(os.path.join(self.warped_c_dir,"*")))
         if len(self.img_agnostic_paths) != len(self.warped_c_paths):
             raise("the data length mismatch")
-
-        ## agnostic_mask 
-        self.agnostic_mask_dir = os.path.join(self.root, 'agnostic_mask')
-        self.agnostic_mask_paths = sorted(glob(os.path.join(self.agnostic_mask_dir,"*")))
-        if len(self.img_agnostic_paths) != len(self.agnostic_mask_paths):
-            raise("the data length mismatch")
        
         ## parse
         self.parse_dir = os.path.join(self.root, 'parse')
@@ -58,7 +52,7 @@ class AlignedDataset(BaseDataset):
             raise("the data length mismatch")
 
         ## ground_truth
-        self.ground_truth_dir = os.path.join(self.root, 'synthesis_image')
+        self.ground_truth_dir = os.path.join(self.root, 'ground_truth_image')
         self.ground_truth_paths = sorted(glob(os.path.join(self.ground_truth_dir,"*")))
         if len(self.img_agnostic_paths) != len(self.ground_truth_paths):
             raise("the data length mismatch")
@@ -76,7 +70,6 @@ class AlignedDataset(BaseDataset):
         ## pose
         pose_path = self.pose_paths[index]
         pose = np.load(pose_path)
-        
         pose = np.squeeze(pose)
         pose_tensor = torch.from_numpy(pose)
 
@@ -85,77 +78,33 @@ class AlignedDataset(BaseDataset):
         warped_c = np.load(warped_c_path)
         warped_c = np.squeeze(warped_c)
         warped_c_tensor = torch.from_numpy(warped_c)
-
-        ## agnostic_mask
-        agnostic_mask_path = self.agnostic_mask_paths[index]
-        agnostic_mask = np.load(agnostic_mask_path)
-        
-        agnostic_mask = np.squeeze(agnostic_mask)
-        agnostic_mask = agnostic_mask[np.newaxis,:]
-        #print(agnostic_mask.shape)
-        # remove the whilte pixels at boundary 
-        #print("type of warped_cm", warped_cm.dtype)
-        if False:
-            warped_cm  = cv2.erode(warped_cm, np.ones((3,3)),iterations=np.random.randint(10))
-        
-        agnostic_mask_tensor = torch.from_numpy(agnostic_mask).type(torch.float32)
-        if True:
-            img_agnostic_tensor = img_agnostic_tensor * (1-agnostic_mask_tensor)
         
         ## parse
         parse_path = self.parse_paths[index]
         parse = np.load(parse_path)
-        #print(parse.shape)
         parse = np.squeeze(parse)
         parse_tensor = torch.from_numpy(parse)
 
         ## parse_div
         parse_div_path = self.parse_div_paths[index]
         parse_div = np.load(parse_div_path)
-        #print(parse_div.shape)
         parse_div = np.squeeze(parse_div)
-        if True:#erode cloth mask(remove tag of warped cloth)
-            align_mask = parse_div[2] > 0
-            align_mask = ((align_mask +1)/2*255).astype(np.uint8)
-            align_mask = cv2.erode(align_mask,np.ones((3,3)),iterations=np.random.randint(10))
-            align_mask = align_mask.astype(np.float32)/255*2-1
-            parse_div[7] = parse_div[7] + (parse_div[2]-align_mask)
-            parse_div[2] = align_mask
         parse_div_tensor = torch.from_numpy(parse_div)
+
 
         ## misalign_mask
         misalign_mask_path = self.misalign_mask_paths[index]
         misalign_mask = np.load(misalign_mask_path)
-        #print(misalign_mask.shape)
-
         misalign_mask = np.squeeze(misalign_mask)
         misalign_mask = misalign_mask[np.newaxis,:]
-        #print(misalign_mask.shape)
-        #exit(0)
         misalign_mask_tensor = torch.from_numpy(misalign_mask)
 
         ## ground_truth
         ground_truth_path = self.ground_truth_paths[index]
         ground_truth_image = Image.open(ground_truth_path)
-        transform_synthesis_image = normalize_transform()
-        ground_truth_image_tensor = transform_synthesis_image(ground_truth_image.convert('RGB'))
+        transform_ground_truth_image = normalize_transform()
+        ground_truth_image_tensor = transform_ground_truth_image(ground_truth_image.convert('RGB'))
 
-        #img_agnostic_tensor = (1-agnostic_mask_tensor) * img_agnostic_tensor
-
-        if True:
-            cloth_mask = (parse_div_tensor[2:3,:,:]>0)
-            #plt.subplot(1, 2, 1), plt.imshow(
-            #    ((np.transpose(warped_c_tensor.numpy(), (1, 2, 0)) + 1) / 2 * 255).astype(np.uint8))
-            ground_truth_cloth = ground_truth_image_tensor.clone() * cloth_mask
-            warped_c_tensor = warped_c_tensor * cloth_mask
-            #plt.subplot(1, 2, 2), plt.imshow(
-            #    ((np.transpose(warped_c_tensor.numpy(), (1, 2, 0)) + 1) / 2 * 255).astype(np.uint8))
-            #plt.subplot(1,3,1),plt.imshow(((np.transpose(ground_truth_image_tensor.numpy(), (1, 2, 0)) + 1) / 2 * 255).astype(np.uint8))
-            #plt.subplot(1,3,2),plt.imshow(((np.transpose(cloth_mask.numpy(), (1, 2, 0)) + 1) / 2 * 255).astype(np.uint8))
-            #plt.subplot(1,3,3),plt.imshow(((np.transpose(ground_truth_cloth.numpy(),(1,2,0))+1)/2*255).astype(np.uint8))
-            #plt.show()
-
-    
         input_dict = {'index': index, 
                 'img_agnostic':img_agnostic_tensor,
                 'pose':pose_tensor,
@@ -164,8 +113,6 @@ class AlignedDataset(BaseDataset):
                 'parse_div':parse_div_tensor,
                 'misalign_mask':misalign_mask_tensor,
                 'ground_truth_image':ground_truth_image_tensor,
-                'agnostic_mask': agnostic_mask_tensor,
-                'ground_truth_cloth':ground_truth_cloth,
                 'path':ground_truth_path}
 
         return input_dict

@@ -12,10 +12,10 @@ class Pix2PixHDModel(BaseModel):
     def name(self):
         return 'Pix2PixHDModel'
     
-    def init_loss_filter(self, use_gan_feat_loss, use_vgg_loss,use_L1_loss):
-        flags = (True, use_gan_feat_loss, use_vgg_loss, True, True, use_L1_loss)
-        def loss_filter(g_gan, g_gan_feat, g_vgg, d_real, d_fake, g_l1):
-            return [l for (l,f) in zip((g_gan,g_gan_feat,g_vgg,d_real,d_fake, g_l1),flags) if f]
+    def init_loss_filter(self, use_gan_feat_loss, use_vgg_loss):
+        flags = (True, use_gan_feat_loss, use_vgg_loss, True, True)
+        def loss_filter(g_gan, g_gan_feat, g_vgg, d_real, d_fake):
+            return [l for (l,f) in zip((g_gan,g_gan_feat,g_vgg,d_real,d_fake),flags) if f]
         return loss_filter
 
     def initialize(self, opt):
@@ -39,7 +39,7 @@ class Pix2PixHDModel(BaseModel):
         # Discriminator network
         if self.isTrain:
             use_sigmoid = opt.no_lsgan
-            netD_input_nc = 3+3+3+3+7
+            netD_input_nc = 3+3+3+3+7 #warped_c, pose, image_agnositc, fake_image, parse
             self.netD = networks.define_D(netD_input_nc, opt.ndf, opt.n_layers_D, opt.norm, use_sigmoid, 
                                           opt.num_D, not opt.no_ganFeat_loss, gpu_ids=self.gpu_ids)
 
@@ -61,14 +61,14 @@ class Pix2PixHDModel(BaseModel):
             self.old_lr = opt.lr
 
             # define loss functions
-            self.loss_filter = self.init_loss_filter(not opt.no_ganFeat_loss, not opt.no_vgg_loss, not opt.no_L1_loss)
+            self.loss_filter = self.init_loss_filter(not opt.no_ganFeat_loss, not opt.no_vgg_loss)
             
-            self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan, tensor=self.Tensor)   
+            self.criterionGAN = networks.GANLoss('hinge', tensor=self.Tensor)
             self.criterionFeat = torch.nn.L1Loss()
             if not opt.no_vgg_loss:             
                 self.criterionVGG = networks.VGGLoss(self.gpu_ids)
 
-            self.loss_names = self.loss_filter('G_GAN','G_GAN_Feat','G_VGG','D_real', 'D_fake', 'G_L1')
+            self.loss_names = self.loss_filter('G_GAN','G_GAN_Feat','G_VGG','D_real', 'D_fake')
 
             # initialize optimizers
             # optimizer G
@@ -89,47 +89,31 @@ class Pix2PixHDModel(BaseModel):
         else:
             return self.netD.forward(input_concat)
 
-    def forward(self, img_agnostic,pose, warped_c, parse, parse_div,misalign_mask,agnostic_mask,ground_truth_image, infer=False):
+    def forward(self, img_agnostic,pose, warped_c, parse, parse_div,misalign_mask,ground_truth_image, infer=False):
         #@ TODO: which loss do we have to use?
         #@ TODO: why do we have to normalize pose? \
         # in SPADE normalizing uniform values like openpose_render lose information
-        #img_agnostic = img_agnostic.clone() * (1-agnostic_mask.clone())
         fake_image =self.netG.forward(torch.cat((img_agnostic, pose, warped_c), dim=1), parse, parse_div, misalign_mask)
         # Fake Detection and Loss
-        #print(img_agnostic.dtype,agnostic_mask.dtype,fake_image.dtype)
-        #fake_image = img_agnostic * (1-agnostic_mask) + fake_image * agnostic_mask
-        #fake_image = warped_c * (parse_div[:,2:3,:,:]) + fake_image * (1-parse_div[:,2:3,:,:])
-        #cloth_mask = parse_div.detach()[:,2,:,:]
 
-        #cloth_mask = cloth_mask.cpu().numpy()
-        '''for batch in range(cloth_mask.shape[0]):
-            temp = cloth_mask[batch] > 0
-            temp = ((temp+1)/2*255).astype(np.uint8)
-            temp = cv2.erode(temp, np.ones((3, 3), np.uint8), iterations=5)
-            temp = temp.astype(np.float32)/255*2-1
-            cloth_mask[batch] = temp
-        cloth_mask = torch.from_numpy(cloth_mask[:,np.newaxis,:,:]).cuda()
-
-
-        fake_image = warped_c * cloth_mask + fake_image * (1-cloth_mask)'''
         pred_fake_pool = self.discriminate(torch.cat((parse, pose,img_agnostic, warped_c), dim=1), fake_image, use_pool=True)
-        loss_D_fake = self.criterionGAN(pred_fake_pool, False)        
+        loss_D_fake = self.criterionGAN(pred_fake_pool, False,for_discriminator=True)
 
         # Real Detection and Loss        
         pred_real = self.discriminate(torch.cat((parse, pose,img_agnostic, warped_c), dim=1), ground_truth_image)
-        loss_D_real = self.criterionGAN(pred_real, True)
+        loss_D_real = self.criterionGAN(pred_real, True,for_discriminator=True)
 
         # GAN loss (Fake Passability Loss)        
         pred_fake = self.netD.forward(torch.cat((torch.cat((parse, pose,img_agnostic, warped_c), dim=1), fake_image), dim=1))
 
-        loss_G_GAN = self.criterionGAN(pred_fake, True) * 0.1               
+        loss_G_GAN = self.criterionGAN(pred_fake, True,for_discriminator=False) * 0.1
         # GAN feature matching loss
         loss_G_GAN_Feat = 0
 
         Feat_loss_map = torch.zeros((fake_image.shape[0],self.opt.num_D * (len(pred_fake[0])-1),fake_image.shape[2],fake_image.shape[3])).cuda()
 
         if not self.opt.no_ganFeat_loss:
-            feat_weights = 1.0 / (self.opt.n_layers_D + 1)
+            feat_weights = 1.0 #/ (self.opt.n_layers_D + 1)#match with SPADE(unweighted_loss)
             D_weights = 1.0 / self.opt.num_D
             for i in range(self.opt.num_D):
                 for j in range(len(pred_fake[i])-1):
@@ -150,14 +134,9 @@ class Pix2PixHDModel(BaseModel):
             vgg_loss_map*= self.opt.lambda_feat
 
 
-        # heejune added L1 for testing
-        loss_G_L1 = 0
-        if not self.opt.no_L1_loss:
-            L1_loss = torch.nn.L1Loss()
-            loss_G_L1 = L1_loss(warped_c*parse_div[:,2:3,:,:]+img_agnostic*(1-agnostic_mask) , fake_image*parse_div[:,2:3,:,:]+fake_image*(1-agnostic_mask)) * 500
-        return [ self.loss_filter( loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake, loss_G_L1 ), fake_image ] ,vgg_loss_map,Feat_loss_map
+        return [ self.loss_filter( loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake), fake_image ] ,vgg_loss_map,Feat_loss_map
 
-    def inference(self,img_agnostic,pose, warped_c, parse, parse_div,misalign_mask,agnostic_mask):
+    def inference(self,img_agnostic,pose, warped_c, parse, parse_div,misalign_mask):
 
         with torch.no_grad():
             fake_image = self.netG.forward(torch.cat((img_agnostic, pose, warped_c), dim=1), parse, parse_div, misalign_mask)
@@ -191,8 +170,8 @@ class Pix2PixHDModel(BaseModel):
         self.old_lr = lr
 
 class InferenceModel(Pix2PixHDModel):
-    def forward(self, img_agnostic,pose, warped_c, parse, parse_div,misalign_mask,agnostic_mask):
+    def forward(self, img_agnostic,pose, warped_c, parse, parse_div,misalign_mask):
 
-        return self.inference(img_agnostic,pose, warped_c, parse, parse_div,misalign_mask,agnostic_mask)
+        return self.inference(img_agnostic,pose, warped_c, parse, parse_div,misalign_mask)
 
         
