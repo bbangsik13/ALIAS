@@ -93,12 +93,12 @@ class Pix2PixHDModel(BaseModel):
         #@ TODO: which loss do we have to use?
         #@ TODO: why do we have to normalize pose? \
         # in SPADE normalizing uniform values like openpose_render lose information
-
+        #img_agnostic = img_agnostic.clone() * (1-agnostic_mask.clone())
         fake_image =self.netG.forward(torch.cat((img_agnostic, pose, warped_c), dim=1), parse, parse_div, misalign_mask)
         # Fake Detection and Loss
         #print(img_agnostic.dtype,agnostic_mask.dtype,fake_image.dtype)
         #fake_image = img_agnostic * (1-agnostic_mask) + fake_image * agnostic_mask
-
+        #fake_image = warped_c * (parse_div[:,2:3,:,:]) + fake_image * (1-parse_div[:,2:3,:,:])
         #cloth_mask = parse_div.detach()[:,2,:,:]
 
         #cloth_mask = cloth_mask.cpu().numpy()
@@ -130,7 +130,7 @@ class Pix2PixHDModel(BaseModel):
 
         if not self.opt.no_ganFeat_loss:
             feat_weights = 1.0 / (self.opt.n_layers_D + 1)
-            D_weights = 4.0 / self.opt.num_D
+            D_weights = 1.0 / self.opt.num_D
             for i in range(self.opt.num_D):
                 for j in range(len(pred_fake[i])-1):
                     loss_G_GAN_Feat += D_weights * feat_weights * \
@@ -154,7 +154,7 @@ class Pix2PixHDModel(BaseModel):
         loss_G_L1 = 0
         if not self.opt.no_L1_loss:
             L1_loss = torch.nn.L1Loss()
-            loss_G_L1 = L1_loss(warped_c*parse_div[:,2:3,:,:] , fake_image*parse_div[:,2:3,:,:]) * 500
+            loss_G_L1 = L1_loss(warped_c*parse_div[:,2:3,:,:]+img_agnostic*(1-agnostic_mask) , fake_image*parse_div[:,2:3,:,:]+fake_image*(1-agnostic_mask)) * 500
         return [ self.loss_filter( loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake, loss_G_L1 ), fake_image ] ,vgg_loss_map,Feat_loss_map
 
     def inference(self,img_agnostic,pose, warped_c, parse, parse_div,misalign_mask,agnostic_mask):

@@ -100,10 +100,10 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
 
         Ia = Variable(data['img_agnostic'])
         P  = Variable(data['pose'])
-        '''if total_steps % opt.print_freq == print_delta:
+        if True:#total_steps % opt.print_freq == print_delta:
             Wc = Variable(data['warped_c'])
         else:
-            Wc = Variable(data['ground_truth_cloth'])'''
+            Wc = Variable(data['ground_truth_cloth'])
         Wc = Variable(data['warped_c'])
         #Sc = Variable(data['ground_truth_cloth'])
         Ma = Variable(data['agnostic_mask'])
@@ -143,7 +143,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
         optimizer_D.step()
 
         errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
-        if (total_steps % 100 == print_delta):
+        if (total_steps % 100 == print_delta) and not (total_steps % opt.print_freq == print_delta):
             if USE_WANDB:
                 wandb.log(errors)
         #eta = (time.time() - epoch_start_time) * (len(dataset) / opt.batchSize - i) / (i - save_epoch_iter + 1)
@@ -194,9 +194,8 @@ for epoch in range(start_epoch, opt.niter + opt.niter_stable + opt.niter_decay +
                 Igt  = Variable(data['ground_truth_image'])
                 '''
                 if True:
-                    #visualizer.save_current_results(visuals, epoch, total_steps)
+                    visualizer.save_current_results(visuals, epoch, total_steps)
                 
-
                     for b in range(1):#len(paths)
                         name = paths[b].split('/')[-1].split('.')[0]
                         fake_img = np.transpose(((generated.detach().cpu().numpy()[b]+1)/2*255).astype(np.uint8),(1,2,0))

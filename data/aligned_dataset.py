@@ -58,7 +58,7 @@ class AlignedDataset(BaseDataset):
             raise("the data length mismatch")
 
         ## ground_truth
-        self.ground_truth_dir = os.path.join(self.root, 'ground_truth')
+        self.ground_truth_dir = os.path.join(self.root, 'synthesis_image')
         self.ground_truth_paths = sorted(glob(os.path.join(self.ground_truth_dir,"*")))
         if len(self.img_agnostic_paths) != len(self.ground_truth_paths):
             raise("the data length mismatch")
@@ -76,6 +76,7 @@ class AlignedDataset(BaseDataset):
         ## pose
         pose_path = self.pose_paths[index]
         pose = np.load(pose_path)
+        
         pose = np.squeeze(pose)
         pose_tensor = torch.from_numpy(pose)
 
@@ -95,8 +96,11 @@ class AlignedDataset(BaseDataset):
         # remove the whilte pixels at boundary 
         #print("type of warped_cm", warped_cm.dtype)
         if False:
-            warped_cm  = cv2.erode(warped_cm, np.ones((7,7))) 
+            warped_cm  = cv2.erode(warped_cm, np.ones((3,3)),iterations=np.random.randint(10))
+        
         agnostic_mask_tensor = torch.from_numpy(agnostic_mask).type(torch.float32)
+        if True:
+            img_agnostic_tensor = img_agnostic_tensor * (1-agnostic_mask_tensor)
         
         ## parse
         parse_path = self.parse_paths[index]
@@ -113,7 +117,7 @@ class AlignedDataset(BaseDataset):
         if True:#erode cloth mask(remove tag of warped cloth)
             align_mask = parse_div[2] > 0
             align_mask = ((align_mask +1)/2*255).astype(np.uint8)
-            align_mask = cv2.erode(align_mask,np.ones((3,3)),iterations=5)
+            align_mask = cv2.erode(align_mask,np.ones((3,3)),iterations=np.random.randint(10))
             align_mask = align_mask.astype(np.float32)/255*2-1
             parse_div[7] = parse_div[7] + (parse_div[2]-align_mask)
             parse_div[2] = align_mask
@@ -136,7 +140,7 @@ class AlignedDataset(BaseDataset):
         transform_synthesis_image = normalize_transform()
         ground_truth_image_tensor = transform_synthesis_image(ground_truth_image.convert('RGB'))
 
-        img_agnostic_tensor = (1-agnostic_mask_tensor) * img_agnostic_tensor
+        #img_agnostic_tensor = (1-agnostic_mask_tensor) * img_agnostic_tensor
 
         if True:
             cloth_mask = (parse_div_tensor[2:3,:,:]>0)
@@ -151,7 +155,7 @@ class AlignedDataset(BaseDataset):
             #plt.subplot(1,3,3),plt.imshow(((np.transpose(ground_truth_cloth.numpy(),(1,2,0))+1)/2*255).astype(np.uint8))
             #plt.show()
 
-
+    
         input_dict = {'index': index, 
                 'img_agnostic':img_agnostic_tensor,
                 'pose':pose_tensor,
